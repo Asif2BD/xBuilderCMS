@@ -3,21 +3,25 @@
  * XBuilder Chat Interface View
  *
  * Main interface for chatting with AI and building websites.
+ *
+ * Variables available from router:
+ * - $security: Security instance
+ * - $config: Config instance
  */
 
-use XBuilder\Core\Security;
-use XBuilder\Core\Config;
 use XBuilder\Core\Conversation;
 use XBuilder\Core\Generator;
 use XBuilder\Core\AI;
 
-$csrfToken = Security::generateCsrfToken();
+$csrfToken = $security->generateCsrfToken();
 $conversation = new Conversation();
+$generator = new Generator();
+
 $messages = $conversation->getMessages();
 $generatedHtml = $conversation->getGeneratedHtml();
-$hasPreview = Generator::hasPreview();
-$isPublished = Generator::isPublished();
-$provider = Config::getAiProvider();
+$hasPreview = $generator->hasPreview();
+$isPublished = $generator->isPublished();
+$provider = $config->getAiProvider();
 $providerName = AI::getProviderName($provider);
 ?>
 <!DOCTYPE html>
@@ -26,6 +30,7 @@ $providerName = AI::getProviderName($provider);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XBuilder - Create Your Website</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -161,7 +166,7 @@ $providerName = AI::getProviderName($provider);
                 <h1 class="text-xl font-bold">
                     <span class="text-blue-400">X</span>Builder
                 </h1>
-                <span class="text-xs text-gray-500 hidden sm:inline">Powered by <?php echo Security::sanitize($providerName); ?></span>
+                <span class="text-xs text-gray-500 hidden sm:inline">Powered by <?php echo $security->sanitize($providerName); ?></span>
             </div>
 
             <div class="flex items-center space-x-3">
@@ -213,7 +218,7 @@ $providerName = AI::getProviderName($provider);
                     <?php else: ?>
                         <?php foreach ($messages as $msg): ?>
                         <div class="<?php echo $msg['role'] === 'user' ? 'user-message ml-auto' : 'ai-message'; ?> message rounded-2xl p-4 max-w-[85%]">
-                            <div class="whitespace-pre-wrap"><?php echo nl2br(Security::sanitize($msg['content'])); ?></div>
+                            <div class="whitespace-pre-wrap"><?php echo nl2br($security->sanitize($msg['content'])); ?></div>
                         </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -231,7 +236,7 @@ $providerName = AI::getProviderName($provider);
                 <!-- Input Area -->
                 <div class="p-4 border-t border-white/10">
                     <form id="chatForm" class="flex space-x-2">
-                        <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
 
                         <!-- File Upload Button -->
                         <label class="btn-secondary p-3 rounded-xl cursor-pointer flex-shrink-0" title="Upload CV/Resume">
@@ -313,7 +318,7 @@ $providerName = AI::getProviderName($provider);
                 <div id="codeContent" class="flex-1 overflow-auto hidden">
                     <?php if ($generatedHtml): ?>
                     <div class="code-block h-full">
-                        <pre class="text-gray-300 h-full"><code id="codeDisplay"><?php echo Security::sanitize($generatedHtml); ?></code></pre>
+                        <pre class="text-gray-300 h-full"><code id="codeDisplay"><?php echo $security->sanitize($generatedHtml); ?></code></pre>
                     </div>
                     <?php else: ?>
                     <div class="h-full flex items-center justify-center text-gray-500">

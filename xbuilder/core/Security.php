@@ -2,101 +2,210 @@
 /**
  * XBuilder Security Class
  *
- * Handles encryption, password hashing, CSRF protection, and authentication.
- * Uses AES-256-CBC for encryption and Argon2id for password hashing.
+ * Handles:
+ * - API key encryption/decryption (AES-256-CBC)
+ * - Password hashing (Argon2id)
+ * - CSRF protection with expiry
+ * - Session management with namespacing
+ *
+ * Combined best practices from both implementations:
+ * - Instance-based for better DI/testing
+ * - Secure key deletion (overwrite before unlink)
+ * - Storage directory protection (.htaccess)
+ * - Session namespacing (xbuilder_*)
+ * - CSRF token expiry
  */
 
 namespace XBuilder\Core;
 
 class Security
 {
-    private const CIPHER = 'aes-256-cbc';
-    private const KEY_FILE = 'encryption.key';
+    private string $storagePath;
+    private string $keysPath;
+    private ?string $encryptionKey = null;
 
-    private static ?string $encryptionKey = null;
+    private const CIPHER = 'AES-256-CBC';
+    private const SESSION_PREFIX = 'xbuilder_';
+    private const SESSION_LIFETIME = 86400; // 24 hours
+    private const CSRF_LIFETIME = 3600; // 1 hour
+
+    public function __construct()
+    {
+        $this->storagePath = dirname(__DIR__) . '/storage';
+        $this->keysPath = $this->storagePath . '/keys';
+        $this->ensureDirectories();
+    }
 
     /**
-     * Get or generate the server-specific encryption key
+     * Ensure storage directories exist with proper permissions
      */
-    public static function getEncryptionKey(): string
+    private function ensureDirectories(): void
     {
-        if (self::$encryptionKey !== null) {
-            return self::$encryptionKey;
-        }
+        $dirs = [
+            $this->storagePath,
+            $this->keysPath,
+            $this->storagePath . '/conversations',
+            $this->storagePath . '/uploads'
+        ];
 
-        $keyPath = XBUILDER_STORAGE . '/keys/' . self::KEY_FILE;
-
-        if (file_exists($keyPath)) {
-            self::$encryptionKey = file_get_contents($keyPath);
-        } else {
-            // Generate a new key using server-specific entropy
-            $entropy = __DIR__ . php_uname() . microtime(true) . random_bytes(32);
-            self::$encryptionKey = hash('sha256', $entropy, true);
-
-            // Ensure directory exists
-            $dir = dirname($keyPath);
+        foreach ($dirs as $dir) {
             if (!is_dir($dir)) {
                 mkdir($dir, 0700, true);
             }
-
-            // Save the key securely
-            file_put_contents($keyPath, self::$encryptionKey);
-            chmod($keyPath, 0600);
         }
 
-        return self::$encryptionKey;
+        // Create .htaccess to protect storage directory (defense in depth)
+        $htaccessPath = $this->storagePath . '/.htaccess';
+        if (!file_exists($htaccessPath)) {
+            file_put_contents($htaccessPath, "Order deny,allow\nDeny from all\n");
+            chmod($htaccessPath, 0600);
+        }
+
+        // Create index.php to prevent directory listing
+        $indexPath = $this->storagePath . '/index.php';
+        if (!file_exists($indexPath)) {
+            file_put_contents($indexPath, "<?php\n// Silence is golden\n");
+            chmod($indexPath, 0600);
+        }
+    }
+
+    /**
+     * Get or generate the server encryption key
+     */
+    private function getEncryptionKey(): string
+    {
+        if ($this->encryptionKey !== null) {
+            return $this->encryptionKey;
+        }
+
+        $keyFile = $this->keysPath . '/.server.key';
+
+        if (file_exists($keyFile)) {
+            $this->encryptionKey = file_get_contents($keyFile);
+            return $this->encryptionKey;
+        }
+
+        // Generate new key with server-specific entropy
+        $entropy = __DIR__ . php_uname() . microtime(true) . random_bytes(32);
+        $this->encryptionKey = hash('sha256', $entropy, true);
+
+        file_put_contents($keyFile, $this->encryptionKey);
+        chmod($keyFile, 0600);
+
+        return $this->encryptionKey;
     }
 
     /**
      * Encrypt data using AES-256-CBC
      */
-    public static function encrypt(string $data): string
+    public function encrypt(string $data): string
     {
-        $key = self::getEncryptionKey();
-        $ivLength = openssl_cipher_iv_length(self::CIPHER);
-        $iv = random_bytes($ivLength);
+        $key = $this->getEncryptionKey();
+        $iv = random_bytes(16);
 
-        $encrypted = openssl_encrypt($data, self::CIPHER, $key, OPENSSL_RAW_DATA, $iv);
+        $encrypted = openssl_encrypt(
+            $data,
+            self::CIPHER,
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv
+        );
 
         if ($encrypted === false) {
             throw new \RuntimeException('Encryption failed');
         }
 
-        // Prepend IV to encrypted data and base64 encode
         return base64_encode($iv . $encrypted);
     }
 
     /**
      * Decrypt data using AES-256-CBC
      */
-    public static function decrypt(string $encryptedData): string
+    public function decrypt(string $encryptedData): ?string
     {
-        $key = self::getEncryptionKey();
+        $key = $this->getEncryptionKey();
         $data = base64_decode($encryptedData);
 
-        if ($data === false) {
-            throw new \RuntimeException('Invalid encrypted data');
+        if ($data === false || strlen($data) < 17) {
+            return null;
         }
 
-        $ivLength = openssl_cipher_iv_length(self::CIPHER);
-        $iv = substr($data, 0, $ivLength);
-        $encrypted = substr($data, $ivLength);
+        $iv = substr($data, 0, 16);
+        $encrypted = substr($data, 16);
 
-        $decrypted = openssl_decrypt($encrypted, self::CIPHER, $key, OPENSSL_RAW_DATA, $iv);
+        $decrypted = openssl_decrypt(
+            $encrypted,
+            self::CIPHER,
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv
+        );
 
-        if ($decrypted === false) {
-            throw new \RuntimeException('Decryption failed');
+        return $decrypted !== false ? $decrypted : null;
+    }
+
+    /**
+     * Store an API key securely (encrypted)
+     */
+    public function storeApiKey(string $provider, string $apiKey): bool
+    {
+        $encrypted = $this->encrypt($apiKey);
+        $file = $this->keysPath . '/' . $provider . '.key';
+
+        $result = file_put_contents($file, $encrypted, LOCK_EX);
+        if ($result !== false) {
+            chmod($file, 0600);
+            return true;
         }
 
-        return $decrypted;
+        return false;
+    }
+
+    /**
+     * Retrieve an API key (decrypted)
+     */
+    public function getApiKey(string $provider): ?string
+    {
+        $file = $this->keysPath . '/' . $provider . '.key';
+
+        if (!file_exists($file)) {
+            return null;
+        }
+
+        $encrypted = file_get_contents($file);
+        return $this->decrypt($encrypted);
+    }
+
+    /**
+     * Check if an API key exists
+     */
+    public function hasApiKey(string $provider): bool
+    {
+        return file_exists($this->keysPath . '/' . $provider . '.key');
+    }
+
+    /**
+     * Delete an API key securely (overwrite before delete)
+     */
+    public function deleteApiKey(string $provider): bool
+    {
+        $file = $this->keysPath . '/' . $provider . '.key';
+
+        if (file_exists($file)) {
+            // Overwrite with random bytes before deleting (secure deletion)
+            $size = filesize($file);
+            file_put_contents($file, random_bytes($size));
+            return unlink($file);
+        }
+
+        return true;
     }
 
     /**
      * Hash a password using Argon2id
      */
-    public static function hashPassword(string $password): string
+    public function hashPassword(string $password): string
     {
-        // Use Argon2id if available, fallback to bcrypt
         $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
 
         $options = [];
@@ -114,112 +223,92 @@ class Security
     /**
      * Verify a password against a hash
      */
-    public static function verifyPassword(string $password, string $hash): bool
+    public function verifyPassword(string $password, string $hash): bool
     {
         return password_verify($password, $hash);
     }
 
     /**
-     * Generate a CSRF token
+     * Ensure session is started
      */
-    public static function generateCsrfToken(): string
+    private function ensureSession(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
-
-        $token = bin2hex(random_bytes(32));
-        $_SESSION['csrf_token'] = $token;
-        $_SESSION['csrf_token_time'] = time();
-
-        return $token;
-    }
-
-    /**
-     * Verify a CSRF token
-     */
-    public static function verifyCsrfToken(string $token): bool
-    {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['csrf_token']) || !isset($_SESSION['csrf_token_time'])) {
-            return false;
-        }
-
-        // Token expires after 1 hour
-        if (time() - $_SESSION['csrf_token_time'] > 3600) {
-            unset($_SESSION['csrf_token'], $_SESSION['csrf_token_time']);
-            return false;
-        }
-
-        return hash_equals($_SESSION['csrf_token'], $token);
     }
 
     /**
      * Check if user is authenticated
      */
-    public static function isAuthenticated(): bool
+    public function isAuthenticated(): bool
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
+        $this->ensureSession();
 
-        if (!isset($_SESSION['authenticated']) || !isset($_SESSION['auth_time'])) {
+        $authKey = self::SESSION_PREFIX . 'authenticated';
+        $timeKey = self::SESSION_PREFIX . 'auth_time';
+
+        if (!isset($_SESSION[$authKey]) || $_SESSION[$authKey] !== true) {
             return false;
         }
 
-        // Session expires after 24 hours
-        if (time() - $_SESSION['auth_time'] > 86400) {
-            self::logout();
+        if (!isset($_SESSION[$timeKey])) {
             return false;
         }
 
-        return $_SESSION['authenticated'] === true;
-    }
-
-    /**
-     * Authenticate a user
-     */
-    public static function authenticate(string $password): bool
-    {
-        $config = Config::load();
-
-        if (!isset($config['password_hash'])) {
+        // Check session expiry
+        if ((time() - $_SESSION[$timeKey]) > self::SESSION_LIFETIME) {
+            $this->logout();
             return false;
         }
-
-        if (!self::verifyPassword($password, $config['password_hash'])) {
-            // Rate limiting: delay on failed attempt
-            usleep(500000); // 0.5 second delay
-            return false;
-        }
-
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-
-        // Regenerate session ID on login
-        session_regenerate_id(true);
-
-        $_SESSION['authenticated'] = true;
-        $_SESSION['auth_time'] = time();
 
         return true;
     }
 
     /**
-     * Log out the current user
+     * Set authenticated state
      */
-    public static function logout(): void
+    public function setAuthenticated(bool $authenticated = true): void
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
+        $this->ensureSession();
+
+        $_SESSION[self::SESSION_PREFIX . 'authenticated'] = $authenticated;
+        $_SESSION[self::SESSION_PREFIX . 'auth_time'] = time();
+
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+    }
+
+    /**
+     * Authenticate with password
+     */
+    public function authenticate(string $password, string $hash): bool
+    {
+        if (!$this->verifyPassword($password, $hash)) {
+            // Rate limiting: delay on failed attempt
+            usleep(500000); // 0.5 second delay
+            return false;
         }
 
-        $_SESSION = [];
+        $this->setAuthenticated(true);
+        return true;
+    }
 
+    /**
+     * Logout and destroy session
+     */
+    public function logout(): void
+    {
+        $this->ensureSession();
+
+        // Clear all xbuilder session keys
+        foreach ($_SESSION as $key => $value) {
+            if (strpos($key, self::SESSION_PREFIX) === 0) {
+                unset($_SESSION[$key]);
+            }
+        }
+
+        // Destroy session completely
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
             setcookie(
@@ -239,43 +328,85 @@ class Security
     /**
      * Require authentication or redirect to login
      */
-    public static function requireAuth(): void
+    public function requireAuth(): void
     {
-        if (!self::isAuthenticated()) {
+        if (!$this->isAuthenticated()) {
             header('Location: /xbuilder/login');
             exit;
         }
     }
 
     /**
+     * Generate CSRF token with expiry
+     */
+    public function generateCsrfToken(): string
+    {
+        $this->ensureSession();
+
+        $tokenKey = self::SESSION_PREFIX . 'csrf_token';
+        $timeKey = self::SESSION_PREFIX . 'csrf_time';
+
+        // Generate new token if none exists or expired
+        if (!isset($_SESSION[$tokenKey]) ||
+            !isset($_SESSION[$timeKey]) ||
+            (time() - $_SESSION[$timeKey]) > self::CSRF_LIFETIME) {
+
+            $_SESSION[$tokenKey] = bin2hex(random_bytes(32));
+            $_SESSION[$timeKey] = time();
+        }
+
+        return $_SESSION[$tokenKey];
+    }
+
+    /**
+     * Verify CSRF token
+     */
+    public function verifyCsrfToken(string $token): bool
+    {
+        $this->ensureSession();
+
+        $tokenKey = self::SESSION_PREFIX . 'csrf_token';
+        $timeKey = self::SESSION_PREFIX . 'csrf_time';
+
+        if (!isset($_SESSION[$tokenKey]) || !isset($_SESSION[$timeKey])) {
+            return false;
+        }
+
+        // Check token expiry
+        if ((time() - $_SESSION[$timeKey]) > self::CSRF_LIFETIME) {
+            unset($_SESSION[$tokenKey], $_SESSION[$timeKey]);
+            return false;
+        }
+
+        return hash_equals($_SESSION[$tokenKey], $token);
+    }
+
+    /**
      * Validate API key format
      */
-    public static function validateApiKeyFormat(string $provider, string $key): bool
+    public function validateApiKeyFormat(string $provider, string $key): bool
     {
         $key = trim($key);
 
         switch ($provider) {
             case 'claude':
-                // Claude keys start with sk-ant-
-                return preg_match('/^sk-ant-[a-zA-Z0-9_-]+$/', $key) === 1;
+                return strpos($key, 'sk-ant-') === 0 && strlen($key) > 40;
 
             case 'openai':
-                // OpenAI keys start with sk-
-                return preg_match('/^sk-[a-zA-Z0-9_-]+$/', $key) === 1;
+                return strpos($key, 'sk-') === 0 && strlen($key) > 20;
 
             case 'gemini':
-                // Gemini keys are ~39 characters alphanumeric
                 return preg_match('/^[a-zA-Z0-9_-]{30,50}$/', $key) === 1;
 
             default:
-                return false;
+                return strlen($key) > 10;
         }
     }
 
     /**
-     * Sanitize a string for safe output
+     * Sanitize output for HTML
      */
-    public static function sanitize(string $input): string
+    public function sanitize(string $input): string
     {
         return htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -283,7 +414,7 @@ class Security
     /**
      * Validate file upload
      */
-    public static function validateUpload(array $file, array $allowedTypes, int $maxSize = 10485760): array
+    public function validateUpload(array $file, array $allowedTypes, int $maxSize = 10485760): array
     {
         $errors = [];
 
@@ -311,5 +442,13 @@ class Security
         }
 
         return $errors;
+    }
+
+    /**
+     * Get storage path
+     */
+    public function getStoragePath(): string
+    {
+        return $this->storagePath;
     }
 }

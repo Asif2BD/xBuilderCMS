@@ -3,11 +3,13 @@
  * XBuilder Login View
  *
  * Admin login page for XBuilder.
+ *
+ * Variables available from router:
+ * - $security: Security instance
+ * - $config: Config instance
  */
 
-use XBuilder\Core\Security;
-
-$csrfToken = Security::generateCsrfToken();
+$csrfToken = $security->generateCsrfToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,6 +17,7 @@ $csrfToken = Security::generateCsrfToken();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - XBuilder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -76,7 +79,7 @@ $csrfToken = Security::generateCsrfToken();
             <!-- Login Card -->
             <div class="glass rounded-2xl p-8 animate-fadeIn" style="animation-delay: 0.1s;" id="loginCard">
                 <form id="loginForm" class="space-y-6">
-                    <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
 
                     <div>
                         <label class="block text-sm font-medium mb-2">Password</label>

@@ -6,15 +6,21 @@
  * - AI provider selection
  * - API key storage (encrypted)
  * - Admin password creation
+ *
+ * Variables available from router:
+ * - $GLOBALS['xbuilder_config']: Config instance
+ * - $GLOBALS['xbuilder_security']: Security instance
  */
 
-use XBuilder\Core\Config;
-use XBuilder\Core\Security;
+use XBuilder\Core\AI;
 
 header('Content-Type: application/json');
 
+$config = $GLOBALS['xbuilder_config'];
+$security = $GLOBALS['xbuilder_security'];
+
 // Check if already set up
-if (Config::isSetupComplete()) {
+if ($config->isSetupComplete()) {
     http_response_code(400);
     echo json_encode(['error' => 'Setup already complete']);
     exit;
@@ -22,7 +28,7 @@ if (Config::isSetupComplete()) {
 
 // Verify CSRF token
 $csrfToken = $_POST['csrf_token'] ?? '';
-if (!Security::verifyCsrfToken($csrfToken)) {
+if (!$security->verifyCsrfToken($csrfToken)) {
     http_response_code(403);
     echo json_encode(['error' => 'Invalid security token']);
     exit;
@@ -49,7 +55,7 @@ if (empty($apiKey)) {
     exit;
 }
 
-if (!Security::validateApiKeyFormat($provider, $apiKey)) {
+if (!$security->validateApiKeyFormat($provider, $apiKey)) {
     http_response_code(400);
     $hints = [
         'claude' => 'Claude API keys start with "sk-ant-"',
@@ -68,11 +74,19 @@ if (strlen($password) < 8) {
 }
 
 try {
-    // Run setup
-    Config::setup($provider, $apiKey, $password);
+    // Store API key (encrypted)
+    if (!$security->storeApiKey($provider, $apiKey)) {
+        throw new \RuntimeException('Failed to store API key');
+    }
+
+    // Hash password and complete setup
+    $passwordHash = $security->hashPassword($password);
+    if (!$config->completeSetup($passwordHash, $provider)) {
+        throw new \RuntimeException('Failed to save configuration');
+    }
 
     // Auto-login after setup
-    Security::authenticate($password);
+    $security->setAuthenticated(true);
 
     echo json_encode([
         'success' => true,

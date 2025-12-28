@@ -2,88 +2,78 @@
 /**
  * XBuilder Configuration Class
  *
- * Handles application configuration storage and retrieval.
+ * Handles application configuration and state.
  * Configuration is stored as JSON in the storage directory.
+ *
+ * Combined best practices:
+ * - Instance-based for better DI/testing
+ * - Dot notation for nested values
+ * - Site generation tracking
+ * - Site metadata storage
  */
 
 namespace XBuilder\Core;
 
 class Config
 {
-    private const CONFIG_FILE = 'config.json';
-    private static ?array $config = null;
+    private string $configPath;
+    private ?array $config = null;
 
-    /**
-     * Get the path to the config file
-     */
-    private static function getConfigPath(): string
+    public function __construct()
     {
-        return XBUILDER_STORAGE . '/' . self::CONFIG_FILE;
+        $this->configPath = dirname(__DIR__) . '/storage/config.json';
     }
 
     /**
      * Load configuration from file
      */
-    public static function load(): array
+    private function load(): array
     {
-        if (self::$config !== null) {
-            return self::$config;
+        if ($this->config !== null) {
+            return $this->config;
         }
 
-        $path = self::getConfigPath();
-
-        if (!file_exists($path)) {
-            self::$config = [];
-            return self::$config;
+        if (!file_exists($this->configPath)) {
+            $this->config = [];
+            return $this->config;
         }
 
-        $content = file_get_contents($path);
-        $config = json_decode($content, true);
+        $content = file_get_contents($this->configPath);
+        $this->config = json_decode($content, true) ?? [];
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException('Invalid configuration file');
-        }
-
-        self::$config = $config;
-        return self::$config;
+        return $this->config;
     }
 
     /**
      * Save configuration to file
      */
-    public static function save(array $config): bool
+    private function save(): bool
     {
-        $path = self::getConfigPath();
-        $dir = dirname($path);
-
+        $dir = dirname($this->configPath);
         if (!is_dir($dir)) {
             mkdir($dir, 0700, true);
         }
 
-        $json = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $result = file_put_contents(
+            $this->configPath,
+            json_encode($this->config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
+        );
 
-        if ($json === false) {
-            throw new \RuntimeException('Failed to encode configuration');
+        if ($result !== false) {
+            chmod($this->configPath, 0600);
+            return true;
         }
 
-        $result = file_put_contents($path, $json, LOCK_EX);
-
-        if ($result === false) {
-            throw new \RuntimeException('Failed to save configuration');
-        }
-
-        chmod($path, 0600);
-        self::$config = $config;
-
-        return true;
+        return false;
     }
 
     /**
-     * Get a configuration value
+     * Get a config value (supports dot notation)
      */
-    public static function get(string $key, $default = null)
+    public function get(string $key, $default = null)
     {
-        $config = self::load();
+        $config = $this->load();
 
         // Support dot notation for nested values
         $keys = explode('.', $key);
@@ -100,15 +90,15 @@ class Config
     }
 
     /**
-     * Set a configuration value
+     * Set a config value (supports dot notation)
      */
-    public static function set(string $key, $value): bool
+    public function set(string $key, $value): bool
     {
-        $config = self::load();
+        $this->load();
 
         // Support dot notation for nested values
         $keys = explode('.', $key);
-        $ref = &$config;
+        $ref = &$this->config;
 
         foreach ($keys as $i => $k) {
             if ($i === count($keys) - 1) {
@@ -121,136 +111,119 @@ class Config
             }
         }
 
-        return self::save($config);
+        return $this->save();
     }
 
     /**
      * Check if setup is complete
      */
-    public static function isSetupComplete(): bool
+    public function isSetupComplete(): bool
     {
-        $config = self::load();
-        return !empty($config['password_hash']) && !empty($config['ai_provider']);
+        return $this->get('setup_complete', false) === true;
+    }
+
+    /**
+     * Complete setup with password and AI provider
+     */
+    public function completeSetup(string $passwordHash, string $aiProvider): bool
+    {
+        $this->load();
+        $this->config['setup_complete'] = true;
+        $this->config['password_hash'] = $passwordHash;
+        $this->config['ai_provider'] = $aiProvider;
+        $this->config['created_at'] = date('c');
+        $this->config['site_generated'] = false;
+        $this->config['version'] = '1.0.0';
+
+        return $this->save();
     }
 
     /**
      * Get the configured AI provider
      */
-    public static function getAiProvider(): ?string
+    public function getAiProvider(): ?string
     {
-        return self::get('ai_provider');
+        return $this->get('ai_provider');
     }
 
     /**
-     * Get the encrypted API key for a provider
+     * Set the AI provider
      */
-    public static function getApiKey(string $provider): ?string
+    public function setAiProvider(string $provider): bool
     {
-        $keyPath = XBUILDER_STORAGE . '/keys/' . $provider . '.key';
-
-        if (!file_exists($keyPath)) {
-            return null;
-        }
-
-        $encrypted = file_get_contents($keyPath);
-        return Security::decrypt($encrypted);
+        return $this->set('ai_provider', $provider);
     }
 
     /**
-     * Save an API key (encrypted)
+     * Get password hash
      */
-    public static function saveApiKey(string $provider, string $key): bool
+    public function getPasswordHash(): ?string
     {
-        $keyPath = XBUILDER_STORAGE . '/keys/' . $provider . '.key';
-        $dir = dirname($keyPath);
-
-        if (!is_dir($dir)) {
-            mkdir($dir, 0700, true);
-        }
-
-        $encrypted = Security::encrypt($key);
-        $result = file_put_contents($keyPath, $encrypted, LOCK_EX);
-
-        if ($result === false) {
-            return false;
-        }
-
-        chmod($keyPath, 0600);
-        return true;
+        return $this->get('password_hash');
     }
 
     /**
-     * Delete an API key
+     * Check if site has been generated
      */
-    public static function deleteApiKey(string $provider): bool
+    public function isSiteGenerated(): bool
     {
-        $keyPath = XBUILDER_STORAGE . '/keys/' . $provider . '.key';
-
-        if (file_exists($keyPath)) {
-            return unlink($keyPath);
-        }
-
-        return true;
+        return $this->get('site_generated', false) === true;
     }
 
     /**
-     * Initial setup configuration
+     * Mark site as generated
      */
-    public static function setup(string $provider, string $apiKey, string $password): bool
+    public function markSiteGenerated(): bool
     {
-        // Validate provider
-        $validProviders = ['claude', 'openai', 'gemini'];
-        if (!in_array($provider, $validProviders)) {
-            throw new \InvalidArgumentException('Invalid AI provider');
-        }
-
-        // Validate API key format
-        if (!Security::validateApiKeyFormat($provider, $apiKey)) {
-            throw new \InvalidArgumentException('Invalid API key format for ' . $provider);
-        }
-
-        // Validate password strength
-        if (strlen($password) < 8) {
-            throw new \InvalidArgumentException('Password must be at least 8 characters');
-        }
-
-        // Save API key (encrypted)
-        if (!self::saveApiKey($provider, $apiKey)) {
-            throw new \RuntimeException('Failed to save API key');
-        }
-
-        // Save configuration
-        $config = [
-            'ai_provider' => $provider,
-            'password_hash' => Security::hashPassword($password),
-            'setup_time' => date('c'),
-            'version' => '1.0.0',
-        ];
-
-        return self::save($config);
+        return $this->set('site_generated', true);
     }
 
     /**
-     * Reset the configuration (for testing)
+     * Store site metadata
      */
-    public static function reset(): void
+    public function setSiteMetadata(array $metadata): bool
     {
-        self::$config = null;
-        $path = self::getConfigPath();
+        return $this->set('site_metadata', $metadata);
+    }
 
-        if (file_exists($path)) {
-            unlink($path);
-        }
+    /**
+     * Get site metadata
+     */
+    public function getSiteMetadata(): array
+    {
+        return $this->get('site_metadata', []);
+    }
 
-        // Delete all API keys
-        $keysDir = XBUILDER_STORAGE . '/keys/';
-        if (is_dir($keysDir)) {
-            $files = glob($keysDir . '*.key');
-            foreach ($files as $file) {
-                if (basename($file) !== 'encryption.key') {
-                    unlink($file);
-                }
-            }
+    /**
+     * Get all config (excludes sensitive data)
+     */
+    public function getPublicConfig(): array
+    {
+        $config = $this->load();
+
+        // Remove sensitive data
+        unset($config['password_hash']);
+
+        return $config;
+    }
+
+    /**
+     * Reset configuration (for testing)
+     */
+    public function reset(): void
+    {
+        $this->config = null;
+
+        if (file_exists($this->configPath)) {
+            unlink($this->configPath);
         }
+    }
+
+    /**
+     * Get raw config array
+     */
+    public function toArray(): array
+    {
+        return $this->load();
     }
 }

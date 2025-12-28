@@ -4,30 +4,28 @@
  *
  * Handles routing for the XBuilder admin interface.
  * Routes to appropriate views or API endpoints.
+ *
+ * Combined best practices:
+ * - Manual requires for core classes (explicit dependencies)
+ * - Instance-based class usage
+ * - Clean route definitions
  */
 
-// Autoloader for XBuilder classes
-spl_autoload_register(function ($class) {
-    // Only handle XBuilder namespace
-    if (strpos($class, 'XBuilder\\') !== 0) {
-        return;
-    }
-
-    // Convert namespace to file path
-    $class = str_replace('XBuilder\\', '', $class);
-    $class = str_replace('\\', '/', $class);
-    $file = __DIR__ . '/' . strtolower($class) . '.php';
-
-    // Handle Core namespace
-    $file = str_replace('/core/', '/core/', $file);
-
-    if (file_exists($file)) {
-        require_once $file;
-    }
-});
+// Load core classes
+require_once __DIR__ . '/core/Security.php';
+require_once __DIR__ . '/core/Config.php';
+require_once __DIR__ . '/core/AI.php';
+require_once __DIR__ . '/core/Conversation.php';
+require_once __DIR__ . '/core/Generator.php';
 
 use XBuilder\Core\Config;
 use XBuilder\Core\Security;
+use XBuilder\Core\Conversation;
+use XBuilder\Core\Generator;
+
+// Initialize core services
+$security = new Security();
+$config = new Config();
 
 // Get the request path relative to /xbuilder/
 $requestUri = $_SERVER['REQUEST_URI'];
@@ -63,26 +61,27 @@ $routes = [
 // Route the request
 if (isset($routes[$method][$path])) {
     $handler = $routes[$method][$path];
-    $handler();
+    $handler($config, $security);
 } else {
     // 404 Not Found
     http_response_code(404);
+    header('Content-Type: application/json');
     echo json_encode(['error' => 'Not found']);
 }
 
 /**
  * Handle dashboard/home - redirect appropriately
  */
-function handleDashboard(): void
+function handleDashboard(Config $config, Security $security): void
 {
     // Check if setup is complete
-    if (!Config::isSetupComplete()) {
+    if (!$config->isSetupComplete()) {
         header('Location: /xbuilder/setup');
         exit;
     }
 
     // Check if authenticated
-    if (!Security::isAuthenticated()) {
+    if (!$security->isAuthenticated()) {
         header('Location: /xbuilder/login');
         exit;
     }
@@ -95,30 +94,31 @@ function handleDashboard(): void
 /**
  * Handle setup wizard view
  */
-function handleSetupView(): void
+function handleSetupView(Config $config, Security $security): void
 {
     // If already set up, redirect to login
-    if (Config::isSetupComplete()) {
+    if ($config->isSetupComplete()) {
         header('Location: /xbuilder/login');
         exit;
     }
 
+    // Make security available to view for CSRF token
     require __DIR__ . '/views/setup.php';
 }
 
 /**
  * Handle login view
  */
-function handleLoginView(): void
+function handleLoginView(Config $config, Security $security): void
 {
     // If not set up, redirect to setup
-    if (!Config::isSetupComplete()) {
+    if (!$config->isSetupComplete()) {
         header('Location: /xbuilder/setup');
         exit;
     }
 
     // If already authenticated, redirect to chat
-    if (Security::isAuthenticated()) {
+    if ($security->isAuthenticated()) {
         header('Location: /xbuilder/chat');
         exit;
     }
@@ -129,16 +129,19 @@ function handleLoginView(): void
 /**
  * Handle chat interface view
  */
-function handleChatView(): void
+function handleChatView(Config $config, Security $security): void
 {
     // If not set up, redirect to setup
-    if (!Config::isSetupComplete()) {
+    if (!$config->isSetupComplete()) {
         header('Location: /xbuilder/setup');
         exit;
     }
 
     // Require authentication
-    Security::requireAuth();
+    if (!$security->isAuthenticated()) {
+        header('Location: /xbuilder/login');
+        exit;
+    }
 
     require __DIR__ . '/views/chat.php';
 }
@@ -146,9 +149,9 @@ function handleChatView(): void
 /**
  * Handle logout
  */
-function handleLogout(): void
+function handleLogout(Config $config, Security $security): void
 {
-    Security::logout();
+    $security->logout();
     header('Location: /xbuilder/login');
     exit;
 }
@@ -156,18 +159,25 @@ function handleLogout(): void
 /**
  * Handle preview page
  */
-function handlePreview(): void
+function handlePreview(Config $config, Security $security): void
 {
-    Security::requireAuth();
+    if (!$security->isAuthenticated()) {
+        header('Location: /xbuilder/login');
+        exit;
+    }
 
-    $previewPath = XBUILDER_ROOT . '/site/preview.html';
+    $generator = new Generator();
+    $previewPath = $generator->getPreviewPath();
 
     if (file_exists($previewPath)) {
         header('Content-Type: text/html; charset=UTF-8');
         readfile($previewPath);
     } else {
         http_response_code(404);
-        echo '<!DOCTYPE html><html><head><title>No Preview</title></head><body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee;"><div style="text-align: center;"><h1>No Preview Available</h1><p>Start chatting to generate your website</p></div></body></html>';
+        echo '<!DOCTYPE html><html><head><title>No Preview</title></head>';
+        echo '<body style="font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee;">';
+        echo '<div style="text-align: center;"><h1>No Preview Available</h1><p>Start chatting to generate your website</p></div>';
+        echo '</body></html>';
     }
     exit;
 }
@@ -175,62 +185,72 @@ function handlePreview(): void
 /**
  * Handle setup API
  */
-function handleSetupApi(): void
+function handleSetupApi(Config $config, Security $security): void
 {
+    // Pass dependencies to API
+    $GLOBALS['xbuilder_config'] = $config;
+    $GLOBALS['xbuilder_security'] = $security;
     require __DIR__ . '/api/setup.php';
 }
 
 /**
  * Handle login API
  */
-function handleLoginApi(): void
+function handleLoginApi(Config $config, Security $security): void
 {
+    $GLOBALS['xbuilder_config'] = $config;
+    $GLOBALS['xbuilder_security'] = $security;
     require __DIR__ . '/api/login.php';
 }
 
 /**
  * Handle chat API
  */
-function handleChatApi(): void
+function handleChatApi(Config $config, Security $security): void
 {
+    $GLOBALS['xbuilder_config'] = $config;
+    $GLOBALS['xbuilder_security'] = $security;
     require __DIR__ . '/api/chat.php';
 }
 
 /**
  * Handle upload API
  */
-function handleUploadApi(): void
+function handleUploadApi(Config $config, Security $security): void
 {
+    $GLOBALS['xbuilder_config'] = $config;
+    $GLOBALS['xbuilder_security'] = $security;
     require __DIR__ . '/api/upload.php';
 }
 
 /**
  * Handle publish API
  */
-function handlePublishApi(): void
+function handlePublishApi(Config $config, Security $security): void
 {
+    $GLOBALS['xbuilder_config'] = $config;
+    $GLOBALS['xbuilder_security'] = $security;
     require __DIR__ . '/api/publish.php';
 }
 
 /**
  * Handle clear conversation API
  */
-function handleClearApi(): void
+function handleClearApi(Config $config, Security $security): void
 {
     header('Content-Type: application/json');
 
-    if (!Security::isAuthenticated()) {
+    if (!$security->isAuthenticated()) {
         http_response_code(401);
         echo json_encode(['error' => 'Unauthorized']);
         exit;
     }
 
-    use XBuilder\Core\Conversation;
-    use XBuilder\Core\Generator;
-
     $conversation = new Conversation();
     $conversation->clear();
-    Generator::deletePreview();
+
+    $generator = new Generator();
+    $generator->deletePreview();
 
     echo json_encode(['success' => true]);
 }

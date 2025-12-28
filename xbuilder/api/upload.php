@@ -2,19 +2,22 @@
 /**
  * XBuilder Upload API
  *
- * Handles file uploads (CV, resume, documents):
- * - Validates file type and size
- * - Extracts text content
- * - Stores in conversation for AI context
+ * Handles document uploads (CV, resume, etc.) for AI processing.
+ *
+ * Variables available from router:
+ * - $GLOBALS['xbuilder_config']: Config instance
+ * - $GLOBALS['xbuilder_security']: Security instance
  */
 
-use XBuilder\Core\Security;
 use XBuilder\Core\Conversation;
 
 header('Content-Type: application/json');
 
-// Require authentication
-if (!Security::isAuthenticated()) {
+$config = $GLOBALS['xbuilder_config'];
+$security = $GLOBALS['xbuilder_security'];
+
+// Check authentication
+if (!$security->isAuthenticated()) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
     exit;
@@ -22,13 +25,13 @@ if (!Security::isAuthenticated()) {
 
 // Verify CSRF token
 $csrfToken = $_POST['csrf_token'] ?? '';
-if (!Security::verifyCsrfToken($csrfToken)) {
+if (!$security->verifyCsrfToken($csrfToken)) {
     http_response_code(403);
     echo json_encode(['error' => 'Invalid security token']);
     exit;
 }
 
-// Check for file
+// Check for file upload
 if (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) {
     http_response_code(400);
     echo json_encode(['error' => 'No file uploaded']);
@@ -36,19 +39,23 @@ if (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) 
 }
 
 $file = $_FILES['file'];
+
+// Validate upload
 $allowedTypes = ['pdf', 'doc', 'docx', 'txt', 'md', 'json'];
 $maxSize = 10 * 1024 * 1024; // 10MB
 
-// Validate file
-$errors = Security::validateUpload($file, $allowedTypes, $maxSize);
+$errors = $security->validateUpload($file, $allowedTypes, $maxSize);
 if (!empty($errors)) {
     http_response_code(400);
-    echo json_encode(['error' => implode('. ', $errors)]);
+    echo json_encode(['error' => implode(', ', $errors)]);
     exit;
 }
 
 try {
+    // Get file extension
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    // Extract text content based on file type
     $content = '';
 
     switch ($ext) {
@@ -92,10 +99,11 @@ try {
 
     // Store in conversation
     $conversation = new Conversation();
-    $conversation->setDocumentContent($content);
+    $conversation->setDocumentContent($content, $file['name']);
 
-    // Also save the file for reference
-    $uploadDir = XBUILDER_STORAGE . '/uploads/';
+    // Save file for reference
+    $storageDir = dirname(__DIR__) . '/storage';
+    $uploadDir = $storageDir . '/uploads/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0700, true);
     }
@@ -107,7 +115,7 @@ try {
         'success' => true,
         'message' => 'File uploaded and processed',
         'filename' => $file['name'],
-        'contentLength' => strlen($content),
+        'contentLength' => strlen($content)
     ]);
 
 } catch (\Exception $e) {
@@ -213,7 +221,6 @@ function extractDocText(string $path): string
         exec('which antiword 2>/dev/null', $output, $return);
 
         if ($return === 0) {
-            $text = '';
             exec('antiword ' . escapeshellarg($path) . ' 2>/dev/null', $output, $return);
             if ($return === 0) {
                 return implode("\n", $output);
@@ -226,8 +233,8 @@ function extractDocText(string $path): string
 
     // Filter to printable ASCII and common characters
     $text = '';
-    $inText = false;
     $buffer = '';
+    $inText = false;
 
     for ($i = 0; $i < strlen($content); $i++) {
         $char = $content[$i];
