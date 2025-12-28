@@ -1,0 +1,30 @@
+# XBuilder .gitignore
+
+# Storage (sensitive data)
+xbuilder/storage/*
+!xbuilder/storage/.gitkeep
+
+# Generated site
+site/*
+!site/.gitkeep
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*.backup
+*.bak
