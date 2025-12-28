@@ -1,58 +1,46 @@
 <?php
 /**
  * XBuilder Login API
- *
- * Handles admin authentication.
- *
- * Variables available from router:
- * - $GLOBALS['xbuilder_config']: Config instance
- * - $GLOBALS['xbuilder_security']: Security instance
  */
 
 header('Content-Type: application/json');
 
-$config = $GLOBALS['xbuilder_config'];
-$security = $GLOBALS['xbuilder_security'];
+require_once dirname(__DIR__) . '/core/Security.php';
+require_once dirname(__DIR__) . '/core/Config.php';
 
-// Check if setup is complete
-if (!$config->isSetupComplete()) {
+use XBuilder\Core\Security;
+use XBuilder\Core\Config;
+
+// Only accept POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input || !isset($input['password'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Setup not complete', 'redirect' => '/xbuilder/setup']);
+    echo json_encode(['success' => false, 'error' => 'Password required']);
     exit;
 }
 
-// Verify CSRF token
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (!$security->verifyCsrfToken($csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Invalid security token']);
-    exit;
-}
+$security = new Security();
+$config = new Config();
 
-// Get password
-$password = $_POST['password'] ?? '';
-
-if (empty($password)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Password is required']);
-    exit;
-}
-
-// Get stored password hash
 $passwordHash = $config->getPasswordHash();
+
 if (!$passwordHash) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Configuration error']);
+    echo json_encode(['success' => false, 'error' => 'Setup not complete']);
     exit;
 }
 
-// Attempt authentication
-if ($security->authenticate($password, $passwordHash)) {
-    echo json_encode([
-        'success' => true,
-        'redirect' => '/xbuilder/chat'
-    ]);
+if ($security->verifyPassword($input['password'], $passwordHash)) {
+    $security->setAuthenticated(true);
+    echo json_encode(['success' => true]);
 } else {
-    http_response_code(401);
-    echo json_encode(['error' => 'Invalid password']);
+    // Add small delay to prevent brute force
+    usleep(500000); // 0.5 second
+    echo json_encode(['success' => false, 'error' => 'Invalid password']);
 }

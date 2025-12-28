@@ -1,311 +1,239 @@
 <?php
 /**
  * XBuilder Upload API
- *
- * Handles document uploads (CV, resume, etc.) for AI processing.
- *
- * Variables available from router:
- * - $GLOBALS['xbuilder_config']: Config instance
- * - $GLOBALS['xbuilder_security']: Security instance
+ * 
+ * Handles file uploads (CV, documents, etc.)
  */
-
-use XBuilder\Core\Conversation;
 
 header('Content-Type: application/json');
 
-$config = $GLOBALS['xbuilder_config'];
-$security = $GLOBALS['xbuilder_security'];
+require_once dirname(__DIR__) . '/core/Security.php';
 
-// Check authentication
-if (!$security->isAuthenticated()) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+use XBuilder\Core\Security;
+
+// Only accept POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
     exit;
 }
 
-// Verify CSRF token
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (!$security->verifyCsrfToken($csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Invalid security token']);
-    exit;
-}
-
-// Check for file upload
-if (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) {
+// Check for uploaded file
+if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+    $error = $_FILES['file']['error'] ?? 'No file uploaded';
     http_response_code(400);
-    echo json_encode(['error' => 'No file uploaded']);
+    echo json_encode(['success' => false, 'error' => 'Upload failed: ' . $error]);
     exit;
 }
 
 $file = $_FILES['file'];
+$filename = $file['name'];
+$tmpPath = $file['tmp_name'];
+$size = $file['size'];
 
-// Validate upload
-$allowedTypes = ['pdf', 'doc', 'docx', 'txt', 'md', 'json'];
-$maxSize = 10 * 1024 * 1024; // 10MB
-
-$errors = $security->validateUpload($file, $allowedTypes, $maxSize);
-if (!empty($errors)) {
-    http_response_code(400);
-    echo json_encode(['error' => implode(', ', $errors)]);
+// Validate file size (max 10MB)
+if ($size > 10 * 1024 * 1024) {
+    echo json_encode(['success' => false, 'error' => 'File too large. Maximum 10MB allowed.']);
     exit;
 }
 
+// Get file extension
+$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+// Allowed extensions
+$allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'json', 'md'];
+
+if (!in_array($ext, $allowedExtensions)) {
+    echo json_encode(['success' => false, 'error' => 'File type not supported. Allowed: PDF, DOC, DOCX, TXT, JSON, MD']);
+    exit;
+}
+
+// Extract text content based on file type
+$content = '';
+
 try {
-    // Get file extension
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-    // Extract text content based on file type
-    $content = '';
-
     switch ($ext) {
         case 'txt':
         case 'md':
-            $content = file_get_contents($file['tmp_name']);
-            break;
-
         case 'json':
-            $json = file_get_contents($file['tmp_name']);
-            $data = json_decode($json, true);
-            if ($data) {
-                $content = formatJsonForAI($data);
-            } else {
-                $content = $json;
-            }
+            // Plain text files
+            $content = file_get_contents($tmpPath);
             break;
-
+            
         case 'pdf':
-            $content = extractPdfText($file['tmp_name']);
+            // Try to extract text from PDF
+            $content = extractPdfText($tmpPath);
             break;
-
-        case 'docx':
-            $content = extractDocxText($file['tmp_name']);
-            break;
-
+            
         case 'doc':
-            $content = extractDocText($file['tmp_name']);
+        case 'docx':
+            // Try to extract text from Word documents
+            $content = extractWordText($tmpPath, $ext);
             break;
-
+            
         default:
-            throw new \RuntimeException('Unsupported file type');
+            $content = file_get_contents($tmpPath);
     }
-
-    if (empty(trim($content))) {
-        throw new \RuntimeException('Could not extract text from file. Try a different format.');
-    }
-
-    // Clean up the content
-    $content = cleanExtractedText($content);
-
-    // Store in conversation
-    $conversation = new Conversation();
-    $conversation->setDocumentContent($content, $file['name']);
-
-    // Save file for reference
-    $storageDir = dirname(__DIR__) . '/storage';
-    $uploadDir = $storageDir . '/uploads/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0700, true);
-    }
-
-    $savedName = date('Y-m-d_His') . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file['name']);
-    move_uploaded_file($file['tmp_name'], $uploadDir . $savedName);
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'File uploaded and processed',
-        'filename' => $file['name'],
-        'contentLength' => strlen($content)
-    ]);
-
-} catch (\Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'error' => 'Failed to read file: ' . $e->getMessage()]);
+    exit;
 }
 
+if (empty(trim($content))) {
+    echo json_encode(['success' => false, 'error' => 'Could not extract text from file. Try a different format.']);
+    exit;
+}
+
+// Limit content length (for API calls)
+$maxLength = 50000; // ~50k characters
+if (strlen($content) > $maxLength) {
+    $content = substr($content, 0, $maxLength) . "\n\n[Content truncated...]";
+}
+
+// Clean up the content
+$content = cleanText($content);
+
+// Save to uploads folder for reference
+$uploadsDir = dirname(__DIR__) . '/storage/uploads';
+if (!is_dir($uploadsDir)) {
+    mkdir($uploadsDir, 0700, true);
+}
+
+$savedPath = $uploadsDir . '/' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+move_uploaded_file($tmpPath, $savedPath);
+
+echo json_encode([
+    'success' => true,
+    'filename' => $filename,
+    'content' => $content,
+    'length' => strlen($content)
+]);
+
 /**
- * Extract text from PDF
+ * Extract text from PDF using pdftotext command line tool
  */
 function extractPdfText(string $path): string
 {
-    // Try pdftotext first (most reliable)
-    if (function_exists('exec')) {
+    // Check if pdftotext is available
+    $pdftotext = trim(shell_exec('which pdftotext 2>/dev/null'));
+    
+    if ($pdftotext) {
+        // Use pdftotext
         $output = [];
-        $return = 0;
-        exec('which pdftotext 2>/dev/null', $output, $return);
-
-        if ($return === 0) {
-            $tempFile = tempnam(sys_get_temp_dir(), 'pdf_');
-            exec('pdftotext -layout ' . escapeshellarg($path) . ' ' . escapeshellarg($tempFile) . ' 2>/dev/null', $output, $return);
-
-            if ($return === 0 && file_exists($tempFile)) {
-                $text = file_get_contents($tempFile);
-                unlink($tempFile);
-                return $text;
-            }
+        $returnCode = 0;
+        exec("pdftotext -layout " . escapeshellarg($path) . " - 2>/dev/null", $output, $returnCode);
+        
+        if ($returnCode === 0 && !empty($output)) {
+            return implode("\n", $output);
         }
     }
-
-    // Fallback: basic PDF text extraction
+    
+    // Fallback: Try to read raw PDF content
     $content = file_get_contents($path);
-
-    // Extract text between stream markers
+    
+    // Very basic PDF text extraction (works for some PDFs)
     $text = '';
-    if (preg_match_all('/stream\s*(.*?)\s*endstream/s', $content, $matches)) {
-        foreach ($matches[1] as $stream) {
-            // Try to decompress if FlateDecode
-            $decompressed = @gzuncompress($stream);
-            if ($decompressed) {
-                $stream = $decompressed;
-            }
-
-            // Extract text
-            if (preg_match_all('/\((.*?)\)/', $stream, $textMatches)) {
-                $text .= implode(' ', $textMatches[1]) . "\n";
-            }
-            if (preg_match_all('/\[(.*?)\]TJ/', $stream, $tjMatches)) {
-                foreach ($tjMatches[1] as $tj) {
-                    if (preg_match_all('/\((.*?)\)/', $tj, $innerText)) {
-                        $text .= implode('', $innerText[1]);
-                    }
-                }
-                $text .= "\n";
-            }
+    
+    // Find text between stream and endstream
+    preg_match_all('/stream(.*?)endstream/s', $content, $matches);
+    
+    foreach ($matches[1] as $match) {
+        // Try to decode if it's compressed
+        $decoded = @gzuncompress($match);
+        if ($decoded) {
+            $match = $decoded;
+        }
+        
+        // Extract text objects
+        preg_match_all('/\((.*?)\)/', $match, $textMatches);
+        foreach ($textMatches[1] as $textMatch) {
+            $text .= $textMatch . ' ';
         }
     }
-
-    if (empty(trim($text))) {
-        throw new \RuntimeException('Could not extract text from PDF. Please try pdftotext or upload as DOCX/TXT.');
+    
+    if (!empty(trim($text))) {
+        return trim($text);
     }
-
-    return $text;
+    
+    // If all else fails, suggest an alternative
+    throw new Exception('PDF text extraction not available. Please try uploading a TXT or DOCX file.');
 }
 
 /**
- * Extract text from DOCX
+ * Extract text from Word documents
  */
-function extractDocxText(string $path): string
+function extractWordText(string $path, string $ext): string
 {
-    $zip = new \ZipArchive();
-
-    if ($zip->open($path) !== true) {
-        throw new \RuntimeException('Could not open DOCX file');
-    }
-
-    // Read the main document
-    $content = $zip->getFromName('word/document.xml');
-    $zip->close();
-
-    if ($content === false) {
-        throw new \RuntimeException('Could not read DOCX content');
-    }
-
-    // Strip XML tags but preserve structure
-    $content = preg_replace('/<w:p[^>]*>/', "\n", $content);
-    $content = preg_replace('/<w:tab[^>]*>/', "\t", $content);
-    $content = strip_tags($content);
-    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-    return $content;
-}
-
-/**
- * Extract text from DOC (old format)
- */
-function extractDocText(string $path): string
-{
-    // Try antiword first
-    if (function_exists('exec')) {
-        $output = [];
-        $return = 0;
-        exec('which antiword 2>/dev/null', $output, $return);
-
-        if ($return === 0) {
-            exec('antiword ' . escapeshellarg($path) . ' 2>/dev/null', $output, $return);
-            if ($return === 0) {
-                return implode("\n", $output);
+    if ($ext === 'docx') {
+        // DOCX is a ZIP file containing XML
+        $zip = new ZipArchive();
+        
+        if ($zip->open($path) === true) {
+            // Read the main document content
+            $content = $zip->getFromName('word/document.xml');
+            $zip->close();
+            
+            if ($content) {
+                // Strip XML tags to get plain text
+                $text = strip_tags($content);
+                // Clean up whitespace
+                $text = preg_replace('/\s+/', ' ', $text);
+                return trim($text);
             }
         }
+        
+        throw new Exception('Could not read DOCX file');
     }
-
-    // Fallback: extract ASCII text
-    $content = file_get_contents($path);
-
-    // Filter to printable ASCII and common characters
-    $text = '';
-    $buffer = '';
-    $inText = false;
-
-    for ($i = 0; $i < strlen($content); $i++) {
-        $char = $content[$i];
-        $ord = ord($char);
-
-        // Printable ASCII range
-        if ($ord >= 32 && $ord <= 126) {
-            $buffer .= $char;
-            $inText = true;
-        } elseif ($ord === 10 || $ord === 13) {
-            if ($inText && strlen($buffer) > 3) {
-                $text .= $buffer . "\n";
+    
+    if ($ext === 'doc') {
+        // Old .doc format is more complex
+        // Try antiword if available
+        $antiword = trim(shell_exec('which antiword 2>/dev/null'));
+        
+        if ($antiword) {
+            $output = shell_exec("antiword " . escapeshellarg($path) . " 2>/dev/null");
+            if (!empty($output)) {
+                return $output;
             }
-            $buffer = '';
-            $inText = false;
-        } else {
-            if ($inText && strlen($buffer) > 3) {
-                $text .= $buffer . ' ';
-            }
-            $buffer = '';
-            $inText = false;
         }
-    }
-
-    if (strlen($buffer) > 3) {
-        $text .= $buffer;
-    }
-
-    if (empty(trim($text))) {
-        throw new \RuntimeException('Could not extract text from DOC. Please install antiword or upload as DOCX/TXT.');
-    }
-
-    return $text;
-}
-
-/**
- * Format JSON data for AI consumption
- */
-function formatJsonForAI(array $data, int $depth = 0): string
-{
-    $output = '';
-    $indent = str_repeat('  ', $depth);
-
-    foreach ($data as $key => $value) {
-        if (is_array($value)) {
-            $output .= $indent . ucfirst(str_replace('_', ' ', $key)) . ":\n";
-            $output .= formatJsonForAI($value, $depth + 1);
-        } else {
-            $output .= $indent . ucfirst(str_replace('_', ' ', $key)) . ': ' . $value . "\n";
+        
+        // Fallback: try to extract plain text
+        $content = file_get_contents($path);
+        
+        // Extract readable ASCII text
+        $text = '';
+        preg_match_all('/[\x20-\x7E]{4,}/', $content, $matches);
+        
+        if (!empty($matches[0])) {
+            $text = implode(' ', $matches[0]);
         }
+        
+        if (!empty(trim($text))) {
+            return trim($text);
+        }
+        
+        throw new Exception('DOC text extraction not available. Please try uploading a DOCX or TXT file.');
     }
-
-    return $output;
+    
+    throw new Exception('Unsupported file format');
 }
 
 /**
  * Clean up extracted text
  */
-function cleanExtractedText(string $text): string
+function cleanText(string $text): string
 {
     // Remove excessive whitespace
-    $text = preg_replace('/[ \t]+/', ' ', $text);
+    $text = preg_replace('/\s+/', ' ', $text);
+    
+    // Remove non-printable characters (except newlines)
+    $text = preg_replace('/[^\x20-\x7E\n\r]/', '', $text);
+    
+    // Normalize line endings
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    
+    // Remove excessive newlines
     $text = preg_replace('/\n{3,}/', "\n\n", $text);
-
-    // Remove non-printable characters except newlines and tabs
-    $text = preg_replace('/[^\x20-\x7E\x0A\x0D\t]/', '', $text);
-
-    // Trim lines
-    $lines = explode("\n", $text);
-    $lines = array_map('trim', $lines);
-    $text = implode("\n", $lines);
-
+    
     return trim($text);
 }

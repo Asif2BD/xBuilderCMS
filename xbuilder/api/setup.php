@@ -1,98 +1,111 @@
 <?php
 /**
  * XBuilder Setup API
- *
- * Handles initial configuration:
- * - AI provider selection
- * - API key storage (encrypted)
- * - Admin password creation
- *
- * Variables available from router:
- * - $GLOBALS['xbuilder_config']: Config instance
- * - $GLOBALS['xbuilder_security']: Security instance
+ * 
+ * Handles initial setup: API key validation and account creation
  */
-
-use XBuilder\Core\AI;
 
 header('Content-Type: application/json');
 
-$config = $GLOBALS['xbuilder_config'];
-$security = $GLOBALS['xbuilder_security'];
+require_once dirname(__DIR__) . '/core/Security.php';
+require_once dirname(__DIR__) . '/core/Config.php';
+require_once dirname(__DIR__) . '/core/AI.php';
 
-// Check if already set up
-if ($config->isSetupComplete()) {
+use XBuilder\Core\Security;
+use XBuilder\Core\Config;
+use XBuilder\Core\AI;
+
+// Only accept POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
+    exit;
+}
+
+// Get JSON input
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input || !isset($input['action'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Setup already complete']);
+    echo json_encode(['error' => 'Invalid request']);
     exit;
 }
 
-// Verify CSRF token
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (!$security->verifyCsrfToken($csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Invalid security token']);
-    exit;
-}
+$security = new Security();
+$config = new Config();
 
-// Get and validate inputs
-$provider = $_POST['provider'] ?? '';
-$apiKey = $_POST['api_key'] ?? '';
-$password = $_POST['password'] ?? '';
-
-// Validate provider
-$validProviders = ['claude', 'openai', 'gemini'];
-if (!in_array($provider, $validProviders)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Invalid AI provider']);
-    exit;
-}
-
-// Validate API key
-$apiKey = trim($apiKey);
-if (empty($apiKey)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'API key is required']);
-    exit;
-}
-
-if (!$security->validateApiKeyFormat($provider, $apiKey)) {
-    http_response_code(400);
-    $hints = [
-        'claude' => 'Claude API keys start with "sk-ant-"',
-        'openai' => 'OpenAI API keys start with "sk-"',
-        'gemini' => 'Gemini API keys are alphanumeric strings (~39 characters)',
-    ];
-    echo json_encode(['error' => 'Invalid API key format. ' . ($hints[$provider] ?? '')]);
-    exit;
-}
-
-// Validate password
-if (strlen($password) < 8) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Password must be at least 8 characters']);
-    exit;
-}
-
-try {
-    // Store API key (encrypted)
-    if (!$security->storeApiKey($provider, $apiKey)) {
-        throw new \RuntimeException('Failed to store API key');
-    }
-
-    // Hash password and complete setup
-    $passwordHash = $security->hashPassword($password);
-    if (!$config->completeSetup($passwordHash, $provider)) {
-        throw new \RuntimeException('Failed to save configuration');
-    }
-
-    // Auto-login after setup
-    $security->setAuthenticated(true);
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Setup complete'
-    ]);
-} catch (\Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+switch ($input['action']) {
+    case 'validate_key':
+        // Validate API key
+        if (!isset($input['provider']) || !isset($input['api_key'])) {
+            echo json_encode(['valid' => false, 'error' => 'Missing provider or API key']);
+            exit;
+        }
+        
+        $provider = $input['provider'];
+        $apiKey = trim($input['api_key']);
+        
+        // Basic format validation
+        if (!$security->validateApiKeyFormat($provider, $apiKey)) {
+            echo json_encode(['valid' => false, 'error' => 'Invalid API key format']);
+            exit;
+        }
+        
+        // Store key temporarily for validation
+        $security->storeApiKey($provider, $apiKey);
+        
+        // Test the key with actual API call
+        $ai = new AI($provider);
+        $result = $ai->testApiKey();
+        
+        if (!$result['valid']) {
+            // Remove invalid key
+            $security->deleteApiKey($provider);
+            echo json_encode(['valid' => false, 'error' => $result['error'] ?? 'API key validation failed']);
+            exit;
+        }
+        
+        echo json_encode(['valid' => true]);
+        break;
+        
+    case 'complete':
+        // Complete setup
+        if (!isset($input['provider']) || !isset($input['api_key']) || !isset($input['password'])) {
+            echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+            exit;
+        }
+        
+        $provider = $input['provider'];
+        $apiKey = trim($input['api_key']);
+        $password = $input['password'];
+        
+        // Validate password
+        if (strlen($password) < 8) {
+            echo json_encode(['success' => false, 'error' => 'Password must be at least 8 characters']);
+            exit;
+        }
+        
+        // Store API key
+        if (!$security->storeApiKey($provider, $apiKey)) {
+            echo json_encode(['success' => false, 'error' => 'Failed to store API key']);
+            exit;
+        }
+        
+        // Hash password and complete setup
+        $passwordHash = $security->hashPassword($password);
+        
+        if (!$config->completeSetup($passwordHash, $provider)) {
+            echo json_encode(['success' => false, 'error' => 'Failed to save configuration']);
+            exit;
+        }
+        
+        // Auto-login after setup
+        $security->setAuthenticated(true);
+        
+        echo json_encode(['success' => true]);
+        break;
+        
+    default:
+        http_response_code(400);
+        echo json_encode(['error' => 'Unknown action']);
 }

@@ -1,374 +1,389 @@
-<?php
-/**
- * XBuilder Setup Wizard View
- *
- * First-time setup for XBuilder.
- * User selects AI provider, enters API key, and creates admin password.
- *
- * Variables available from router:
- * - $security: Security instance
- * - $config: Config instance
- */
-
-$csrfToken = $security->generateCsrfToken();
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XBuilder Setup</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <title>Setup - XBuilder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: {
+                            900: '#0a0a0f',
+                            800: '#12121a',
+                            700: '#1a1a25',
+                            600: '#252533',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * { font-family: 'Space Grotesk', sans-serif; }
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        body {
+            background: #0a0a0f;
+            background-image: 
+                radial-gradient(at 20% 20%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+            min-height: 100vh;
         }
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .provider-card {
-            transition: all 0.3s ease;
-        }
-        .provider-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        }
-        .provider-card.selected {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-        }
-        input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-        }
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
+        
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.3s ease-out; }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fadeIn {
-            animation: fadeIn 0.5s ease forwards;
+        
+        .provider-card {
+            transition: all 0.2s ease;
         }
-        .step { display: none; }
-        .step.active { display: block; }
+        .provider-card:hover {
+            transform: translateY(-2px);
+        }
+        .provider-card.selected {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .loading-spinner {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
-    <div class="min-h-screen flex items-center justify-center p-4">
+<body class="font-sans text-white">
+    <div class="min-h-screen flex items-center justify-center p-6">
         <div class="w-full max-w-lg">
-            <!-- Logo/Header -->
-            <div class="text-center mb-8 animate-fadeIn">
-                <h1 class="text-4xl font-bold mb-2">
-                    <span class="text-blue-400">X</span>Builder
+            <!-- Logo & Title -->
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-4">🚀</div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                    Welcome to XBuilder
                 </h1>
-                <p class="text-gray-400">AI-Powered Website Generator</p>
+                <p class="text-gray-400 mt-2">Let's set up your AI-powered website builder</p>
             </div>
-
-            <!-- Setup Card -->
-            <div class="glass rounded-2xl p-8 animate-fadeIn" style="animation-delay: 0.1s;">
-                <form id="setupForm" class="space-y-6">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
-
-                    <!-- Step 1: Choose Provider -->
-                    <div id="step1" class="step active">
-                        <h2 class="text-xl font-semibold mb-4">Choose Your AI Provider</h2>
-                        <p class="text-gray-400 text-sm mb-6">Select which AI will power your website generation.</p>
-
-                        <div class="space-y-3">
-                            <!-- Gemini -->
-                            <label class="provider-card glass rounded-xl p-4 cursor-pointer block">
-                                <div class="flex items-center">
-                                    <input type="radio" name="provider" value="gemini" class="sr-only" checked>
-                                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold">Gemini</div>
-                                        <div class="text-sm text-gray-400">Google AI - Free tier available</div>
-                                    </div>
-                                    <div class="text-green-400 text-xs font-semibold px-2 py-1 bg-green-400/10 rounded">Recommended</div>
-                                </div>
-                            </label>
-
-                            <!-- Claude -->
-                            <label class="provider-card glass rounded-xl p-4 cursor-pointer block">
-                                <div class="flex items-center">
-                                    <input type="radio" name="provider" value="claude" class="sr-only">
-                                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold">Claude</div>
-                                        <div class="text-sm text-gray-400">Anthropic - Best quality</div>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <!-- OpenAI -->
-                            <label class="provider-card glass rounded-xl p-4 cursor-pointer block">
-                                <div class="flex items-center">
-                                    <input type="radio" name="provider" value="openai" class="sr-only">
-                                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center mr-4">
-                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M22.2 8.8c.3-.9.4-1.8.3-2.7-.2-1.4-.9-2.7-1.9-3.7-1.3-1.3-3.1-2-4.9-1.9-1 0-2 .3-2.9.8-.6-.5-1.3-.8-2-.9C9.9.2 9 .2 8.1.4c-1.4.3-2.6 1-3.5 2.1-.9 1.1-1.4 2.5-1.3 3.9 0 .5.1 1.1.3 1.6-.7.5-1.2 1.1-1.6 1.8-.6 1-.9 2.2-.8 3.3.1 1.5.7 2.9 1.8 3.9 1.1 1.1 2.5 1.7 4 1.8.5 0 1.1 0 1.6-.1.5.7 1.1 1.2 1.8 1.6 1 .6 2.2.9 3.3.8 1.5-.1 2.9-.8 3.9-1.8 1-1.1 1.6-2.4 1.7-3.9 0-.6 0-1.1-.1-1.7.6-.5 1.2-1 1.6-1.7.5-1 .8-2.1.7-3.2z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold">ChatGPT</div>
-                                        <div class="text-sm text-gray-400">OpenAI - Good balance</div>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <button type="button" onclick="nextStep(2)" class="btn-primary w-full mt-6 py-3 px-6 rounded-xl font-semibold text-white">
-                            Continue
-                        </button>
-                    </div>
-
-                    <!-- Step 2: API Key -->
-                    <div id="step2" class="step">
-                        <div class="flex items-center mb-4">
-                            <button type="button" onclick="prevStep(1)" class="mr-3 text-gray-400 hover:text-white">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </button>
-                            <h2 class="text-xl font-semibold">Enter API Key</h2>
-                        </div>
-
-                        <p class="text-gray-400 text-sm mb-4" id="apiKeyHelp">
-                            Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-blue-400 hover:underline">Google AI Studio</a>
-                        </p>
-
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">API Key</label>
-                                <input
-                                    type="password"
-                                    name="api_key"
-                                    id="apiKey"
-                                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500"
-                                    placeholder="Enter your API key"
-                                    required
-                                >
-                            </div>
-
-                            <div class="flex items-center">
-                                <input type="checkbox" id="showKey" class="mr-2" onchange="toggleKeyVisibility()">
-                                <label for="showKey" class="text-sm text-gray-400">Show API key</label>
-                            </div>
-                        </div>
-
-                        <button type="button" onclick="nextStep(3)" class="btn-primary w-full mt-6 py-3 px-6 rounded-xl font-semibold text-white">
-                            Continue
-                        </button>
-                    </div>
-
-                    <!-- Step 3: Password -->
-                    <div id="step3" class="step">
-                        <div class="flex items-center mb-4">
-                            <button type="button" onclick="prevStep(2)" class="mr-3 text-gray-400 hover:text-white">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </button>
-                            <h2 class="text-xl font-semibold">Create Admin Password</h2>
-                        </div>
-
-                        <p class="text-gray-400 text-sm mb-4">
-                            This password protects your XBuilder admin panel.
-                        </p>
-
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Password</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    id="password"
-                                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500"
-                                    placeholder="Minimum 8 characters"
-                                    minlength="8"
-                                    required
-                                >
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Confirm Password</label>
-                                <input
-                                    type="password"
-                                    name="password_confirm"
-                                    id="passwordConfirm"
-                                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500"
-                                    placeholder="Confirm your password"
-                                    minlength="8"
-                                    required
-                                >
-                            </div>
-                        </div>
-
-                        <button type="submit" id="submitBtn" class="btn-primary w-full mt-6 py-3 px-6 rounded-xl font-semibold text-white">
-                            Complete Setup
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Error Message -->
-                <div id="errorMsg" class="hidden mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"></div>
-
-                <!-- Success Message -->
-                <div id="successMsg" class="hidden mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm"></div>
+            
+            <!-- Progress Indicator -->
+            <div class="flex justify-center gap-2 mb-8">
+                <div class="step-indicator w-3 h-3 rounded-full bg-indigo-500" data-step="1"></div>
+                <div class="step-indicator w-3 h-3 rounded-full bg-dark-600" data-step="2"></div>
+                <div class="step-indicator w-3 h-3 rounded-full bg-dark-600" data-step="3"></div>
             </div>
-
-            <!-- Footer -->
-            <div class="text-center mt-6 text-gray-500 text-sm animate-fadeIn" style="animation-delay: 0.2s;">
-                <p>Your API key is encrypted and stored securely on your server.</p>
+            
+            <!-- Step 1: Choose AI Provider -->
+            <div class="step active" data-step="1">
+                <div class="bg-dark-800 rounded-2xl p-6 border border-dark-600">
+                    <h2 class="text-xl font-semibold mb-4">Choose your AI assistant</h2>
+                    <p class="text-gray-400 text-sm mb-6">Select which AI will help you build your website</p>
+                    
+                    <div class="space-y-3">
+                        <label class="provider-card flex items-center gap-4 p-4 bg-dark-700 rounded-xl border border-dark-600 cursor-pointer">
+                            <input type="radio" name="provider" value="gemini" class="hidden">
+                            <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-2xl">
+                                ✨
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium">Gemini</div>
+                                <div class="text-sm text-gray-400">By Google • Free tier available</div>
+                            </div>
+                            <div class="text-green-400 text-sm font-medium">Free</div>
+                        </label>
+                        
+                        <label class="provider-card flex items-center gap-4 p-4 bg-dark-700 rounded-xl border border-dark-600 cursor-pointer">
+                            <input type="radio" name="provider" value="claude" class="hidden">
+                            <div class="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center text-2xl">
+                                🧠
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium">Claude</div>
+                                <div class="text-sm text-gray-400">By Anthropic • Best quality</div>
+                            </div>
+                            <div class="text-gray-400 text-sm">~$0.03/site</div>
+                        </label>
+                        
+                        <label class="provider-card flex items-center gap-4 p-4 bg-dark-700 rounded-xl border border-dark-600 cursor-pointer">
+                            <input type="radio" name="provider" value="openai" class="hidden">
+                            <div class="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center text-2xl">
+                                🤖
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium">ChatGPT</div>
+                                <div class="text-sm text-gray-400">By OpenAI • Popular choice</div>
+                            </div>
+                            <div class="text-gray-400 text-sm">~$0.02/site</div>
+                        </label>
+                    </div>
+                    
+                    <button onclick="nextStep()" disabled
+                            class="w-full mt-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-dark-600 disabled:cursor-not-allowed rounded-xl font-medium transition">
+                        Continue →
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Enter API Key -->
+            <div class="step" data-step="2">
+                <div class="bg-dark-800 rounded-2xl p-6 border border-dark-600">
+                    <h2 class="text-xl font-semibold mb-4">Enter your API key</h2>
+                    <p class="text-gray-400 text-sm mb-6">
+                        <span id="providerInstructions">Your API key is stored securely and never shared.</span>
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">API Key</label>
+                            <input type="password" id="apiKey" 
+                                   class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-xl focus:border-indigo-500 focus:outline-none"
+                                   placeholder="Enter your API key">
+                        </div>
+                        
+                        <p class="text-xs text-gray-500">
+                            <span id="getKeyLink"></span>
+                        </p>
+                        
+                        <div id="keyError" class="hidden text-red-400 text-sm"></div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="prevStep()" 
+                                class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-xl font-medium transition">
+                            ← Back
+                        </button>
+                        <button onclick="validateKey()" id="validateBtn"
+                                class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-medium transition flex items-center justify-center gap-2">
+                            <span>Validate & Continue</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Create Password -->
+            <div class="step" data-step="3">
+                <div class="bg-dark-800 rounded-2xl p-6 border border-dark-600">
+                    <h2 class="text-xl font-semibold mb-4">Create admin password</h2>
+                    <p class="text-gray-400 text-sm mb-6">
+                        This password protects your XBuilder admin panel.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Password</label>
+                            <input type="password" id="password" 
+                                   class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-xl focus:border-indigo-500 focus:outline-none"
+                                   placeholder="Create a strong password">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Confirm Password</label>
+                            <input type="password" id="confirmPassword" 
+                                   class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-xl focus:border-indigo-500 focus:outline-none"
+                                   placeholder="Confirm your password">
+                        </div>
+                        
+                        <div id="passwordError" class="hidden text-red-400 text-sm"></div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="prevStep()" 
+                                class="px-6 py-3 bg-dark-700 hover:bg-dark-600 rounded-xl font-medium transition">
+                            ← Back
+                        </button>
+                        <button onclick="completeSetup()" id="completeBtn"
+                                class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-medium transition flex items-center justify-center gap-2">
+                            <span>Complete Setup</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
+    
     <script>
+        let currentStep = 1;
+        let selectedProvider = null;
+        
+        const providerInfo = {
+            gemini: {
+                instructions: 'Get your free Gemini API key from Google AI Studio.',
+                link: '<a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline">Get free Gemini API key →</a>'
+            },
+            claude: {
+                instructions: 'Get your Claude API key from the Anthropic Console.',
+                link: '<a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-indigo-400 hover:underline">Get Claude API key →</a>'
+            },
+            openai: {
+                instructions: 'Get your OpenAI API key from the OpenAI platform.',
+                link: '<a href="https://platform.openai.com/api-keys" target="_blank" class="text-indigo-400 hover:underline">Get OpenAI API key →</a>'
+            }
+        };
+        
         // Provider selection
-        document.querySelectorAll('input[name="provider"]').forEach(radio => {
-            radio.addEventListener('change', function() {
+        document.querySelectorAll('input[name="provider"]').forEach(input => {
+            input.addEventListener('change', function() {
+                selectedProvider = this.value;
+                
+                // Update UI
                 document.querySelectorAll('.provider-card').forEach(card => {
                     card.classList.remove('selected');
                 });
                 this.closest('.provider-card').classList.add('selected');
-                updateApiKeyHelp(this.value);
+                
+                // Enable continue button
+                document.querySelector('[data-step="1"] button').disabled = false;
             });
         });
-
-        // Initialize first provider as selected
-        document.querySelector('.provider-card').classList.add('selected');
-
-        function updateApiKeyHelp(provider) {
-            const helpText = document.getElementById('apiKeyHelp');
-            const links = {
-                gemini: 'Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-blue-400 hover:underline">Google AI Studio</a>',
-                claude: 'Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blue-400 hover:underline">Anthropic Console</a>',
-                openai: 'Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" class="text-blue-400 hover:underline">OpenAI Platform</a>'
-            };
-            helpText.innerHTML = links[provider] || links.gemini;
-        }
-
-        function toggleKeyVisibility() {
-            const input = document.getElementById('apiKey');
-            input.type = document.getElementById('showKey').checked ? 'text' : 'password';
-        }
-
-        function nextStep(step) {
-            // Validate current step
-            if (step === 2) {
-                // Step 1 validation (provider is always selected)
-            } else if (step === 3) {
-                const apiKey = document.getElementById('apiKey').value.trim();
-                if (!apiKey) {
-                    showError('Please enter your API key');
-                    return;
+        
+        function updateStepIndicators() {
+            document.querySelectorAll('.step-indicator').forEach(indicator => {
+                const step = parseInt(indicator.dataset.step);
+                if (step <= currentStep) {
+                    indicator.classList.remove('bg-dark-600');
+                    indicator.classList.add('bg-indigo-500');
+                } else {
+                    indicator.classList.remove('bg-indigo-500');
+                    indicator.classList.add('bg-dark-600');
                 }
+            });
+        }
+        
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+            currentStep = step;
+            updateStepIndicators();
+        }
+        
+        function nextStep() {
+            if (currentStep === 1 && selectedProvider) {
+                // Update step 2 with provider info
+                document.getElementById('providerInstructions').textContent = providerInfo[selectedProvider].instructions;
+                document.getElementById('getKeyLink').innerHTML = providerInfo[selectedProvider].link;
+                showStep(2);
             }
-
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            document.getElementById('step' + step).classList.add('active');
-            hideMessages();
         }
-
-        function prevStep(step) {
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            document.getElementById('step' + step).classList.add('active');
-            hideMessages();
+        
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
         }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMsg');
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
-            document.getElementById('successMsg').classList.add('hidden');
-        }
-
-        function showSuccess(message) {
-            const successEl = document.getElementById('successMsg');
-            successEl.textContent = message;
-            successEl.classList.remove('hidden');
-            document.getElementById('errorMsg').classList.add('hidden');
-        }
-
-        function hideMessages() {
-            document.getElementById('errorMsg').classList.add('hidden');
-            document.getElementById('successMsg').classList.add('hidden');
-        }
-
-        // Form submission
-        document.getElementById('setupForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            hideMessages();
-
-            const password = document.getElementById('password').value;
-            const passwordConfirm = document.getElementById('passwordConfirm').value;
-
-            if (password.length < 8) {
-                showError('Password must be at least 8 characters');
+        
+        async function validateKey() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const errorDiv = document.getElementById('keyError');
+            const btn = document.getElementById('validateBtn');
+            
+            if (!apiKey) {
+                errorDiv.textContent = 'Please enter your API key';
+                errorDiv.classList.remove('hidden');
                 return;
             }
-
-            if (password !== passwordConfirm) {
-                showError('Passwords do not match');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Setting up...';
-
+            
+            // Show loading
+            btn.innerHTML = '<div class="loading-spinner"></div><span>Validating...</span>';
+            btn.disabled = true;
+            errorDiv.classList.add('hidden');
+            
             try {
-                const formData = new FormData(this);
                 const response = await fetch('/xbuilder/api/setup', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'validate_key',
+                        provider: selectedProvider,
+                        api_key: apiKey
+                    })
                 });
-
+                
                 const data = await response.json();
-
-                if (data.success) {
-                    showSuccess('Setup complete! Redirecting...');
-                    setTimeout(() => {
-                        window.location.href = '/xbuilder/chat';
-                    }, 1500);
+                
+                if (data.valid) {
+                    showStep(3);
                 } else {
-                    showError(data.error || 'Setup failed. Please try again.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Complete Setup';
+                    errorDiv.textContent = data.error || 'Invalid API key. Please check and try again.';
+                    errorDiv.classList.remove('hidden');
                 }
             } catch (error) {
-                showError('Connection error. Please try again.');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Complete Setup';
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.classList.remove('hidden');
             }
-        });
+            
+            btn.innerHTML = '<span>Validate & Continue</span>';
+            btn.disabled = false;
+        }
+        
+        async function completeSetup() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            const btn = document.getElementById('completeBtn');
+            
+            // Validate password
+            if (password.length < 8) {
+                errorDiv.textContent = 'Password must be at least 8 characters';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            // Show loading
+            btn.innerHTML = '<div class="loading-spinner"></div><span>Setting up...</span>';
+            btn.disabled = true;
+            errorDiv.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/xbuilder/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'complete',
+                        provider: selectedProvider,
+                        api_key: document.getElementById('apiKey').value.trim(),
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirect to main builder
+                    window.location.href = '/xbuilder/';
+                } else {
+                    errorDiv.textContent = data.error || 'Setup failed. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+            
+            btn.innerHTML = '<span>Complete Setup</span>';
+            btn.disabled = false;
+        }
     </script>
 </body>
 </html>

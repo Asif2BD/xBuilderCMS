@@ -1,256 +1,135 @@
 <?php
 /**
  * XBuilder Admin Router
- *
- * Handles routing for the XBuilder admin interface.
- * Routes to appropriate views or API endpoints.
- *
- * Combined best practices:
- * - Manual requires for core classes (explicit dependencies)
- * - Instance-based class usage
- * - Clean route definitions
+ * 
+ * Handles all /xbuilder/* routes for the admin interface
  */
 
 // Load core classes
 require_once __DIR__ . '/core/Security.php';
 require_once __DIR__ . '/core/Config.php';
 require_once __DIR__ . '/core/AI.php';
-require_once __DIR__ . '/core/Conversation.php';
 require_once __DIR__ . '/core/Generator.php';
+require_once __DIR__ . '/core/Conversation.php';
 
-use XBuilder\Core\Config;
 use XBuilder\Core\Security;
-use XBuilder\Core\Conversation;
-use XBuilder\Core\Generator;
+use XBuilder\Core\Config;
 
-// Initialize core services
-$security = new Security();
+// Initialize
 $config = new Config();
+$security = new Security();
 
-// Get the request path relative to /xbuilder/
-$requestUri = $_SERVER['REQUEST_URI'];
-$path = parse_url($requestUri, PHP_URL_PATH);
-$path = preg_replace('#^/xbuilder#', '', $path);
-$path = rtrim($path, '/') ?: '/';
+// Get the route (remove /xbuilder prefix)
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$route = str_replace('/xbuilder', '', $path);
+$route = trim($route, '/') ?: 'home';
 
-// Get request method
-$method = $_SERVER['REQUEST_METHOD'];
+// Check if setup is complete
+$setupComplete = $config->isSetupComplete();
 
-// Define routes
-$routes = [
-    // Views (GET requests)
-    'GET' => [
-        '/' => 'handleDashboard',
-        '/setup' => 'handleSetupView',
-        '/login' => 'handleLoginView',
-        '/chat' => 'handleChatView',
-        '/logout' => 'handleLogout',
-        '/preview' => 'handlePreview',
-    ],
-    // API endpoints (POST requests)
-    'POST' => [
-        '/api/setup' => 'handleSetupApi',
-        '/api/login' => 'handleLoginApi',
-        '/api/chat' => 'handleChatApi',
-        '/api/upload' => 'handleUploadApi',
-        '/api/publish' => 'handlePublishApi',
-        '/api/clear' => 'handleClearApi',
-    ],
-];
+// Public routes (no auth needed)
+$publicRoutes = ['setup', 'api/setup'];
 
-// Route the request
-if (isset($routes[$method][$path])) {
-    $handler = $routes[$method][$path];
-    $handler($config, $security);
-} else {
-    // 404 Not Found
-    http_response_code(404);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Not found']);
-}
-
-/**
- * Handle dashboard/home - redirect appropriately
- */
-function handleDashboard(Config $config, Security $security): void
-{
-    // Check if setup is complete
-    if (!$config->isSetupComplete()) {
-        header('Location: /xbuilder/setup');
-        exit;
-    }
-
-    // Check if authenticated
-    if (!$security->isAuthenticated()) {
-        header('Location: /xbuilder/login');
-        exit;
-    }
-
-    // Redirect to chat interface
-    header('Location: /xbuilder/chat');
+// If setup not complete, only allow setup routes
+if (!$setupComplete && !in_array($route, $publicRoutes)) {
+    header('Location: /xbuilder/setup');
     exit;
 }
 
-/**
- * Handle setup wizard view
- */
-function handleSetupView(Config $config, Security $security): void
-{
-    // If already set up, redirect to login
-    if ($config->isSetupComplete()) {
-        header('Location: /xbuilder/login');
-        exit;
-    }
-
-    // Make security available to view for CSRF token
-    require __DIR__ . '/views/setup.php';
-}
-
-/**
- * Handle login view
- */
-function handleLoginView(Config $config, Security $security): void
-{
-    // If not set up, redirect to setup
-    if (!$config->isSetupComplete()) {
-        header('Location: /xbuilder/setup');
-        exit;
-    }
-
-    // If already authenticated, redirect to chat
-    if ($security->isAuthenticated()) {
-        header('Location: /xbuilder/chat');
-        exit;
-    }
-
-    require __DIR__ . '/views/login.php';
-}
-
-/**
- * Handle chat interface view
- */
-function handleChatView(Config $config, Security $security): void
-{
-    // If not set up, redirect to setup
-    if (!$config->isSetupComplete()) {
-        header('Location: /xbuilder/setup');
-        exit;
-    }
-
-    // Require authentication
-    if (!$security->isAuthenticated()) {
-        header('Location: /xbuilder/login');
-        exit;
-    }
-
-    require __DIR__ . '/views/chat.php';
-}
-
-/**
- * Handle logout
- */
-function handleLogout(Config $config, Security $security): void
-{
-    $security->logout();
-    header('Location: /xbuilder/login');
+// If setup complete and trying to access setup, redirect to home
+if ($setupComplete && $route === 'setup') {
+    header('Location: /xbuilder/');
     exit;
 }
 
-/**
- * Handle preview page
- */
-function handlePreview(Config $config, Security $security): void
-{
-    if (!$security->isAuthenticated()) {
+// Protected routes need authentication
+$protectedRoutes = ['home', 'api/chat', 'api/generate', 'api/settings', 'api/upload', 'api/preview'];
+
+if (in_array($route, $protectedRoutes) || strpos($route, 'api/') === 0) {
+    // Check authentication (skip for initial setup)
+    if ($setupComplete && !$security->isAuthenticated()) {
+        if (strpos($route, 'api/') === 0) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
         header('Location: /xbuilder/login');
         exit;
     }
+}
 
-    $generator = new Generator();
-    $previewPath = $generator->getPreviewPath();
-
-    if (file_exists($previewPath)) {
-        header('Content-Type: text/html; charset=UTF-8');
-        readfile($previewPath);
-    } else {
+// Route to appropriate handler
+switch ($route) {
+    case 'setup':
+        require __DIR__ . '/views/setup.php';
+        break;
+        
+    case 'login':
+        require __DIR__ . '/views/login.php';
+        break;
+        
+    case 'logout':
+        $security->logout();
+        header('Location: /xbuilder/login');
+        break;
+        
+    case 'home':
+    case '':
+        require __DIR__ . '/views/chat.php';
+        break;
+        
+    // API Routes
+    case 'api/setup':
+        require __DIR__ . '/api/setup.php';
+        break;
+        
+    case 'api/login':
+        require __DIR__ . '/api/login.php';
+        break;
+        
+    case 'api/chat':
+        require __DIR__ . '/api/chat.php';
+        break;
+        
+    case 'api/upload':
+        require __DIR__ . '/api/upload.php';
+        break;
+        
+    case 'api/generate':
+        require __DIR__ . '/api/generate.php';
+        break;
+        
+    case 'api/preview':
+        require __DIR__ . '/api/preview.php';
+        break;
+        
+    case 'api/settings':
+        require __DIR__ . '/api/settings.php';
+        break;
+        
+    case 'api/publish':
+        require __DIR__ . '/api/publish.php';
+        break;
+        
+    default:
+        // Check if it's a static asset
+        $assetPath = __DIR__ . '/assets/' . $route;
+        if (file_exists($assetPath) && is_file($assetPath)) {
+            $ext = pathinfo($assetPath, PATHINFO_EXTENSION);
+            $types = [
+                'css' => 'text/css',
+                'js' => 'application/javascript',
+                'png' => 'image/png',
+                'jpg' => 'image/jpeg',
+                'svg' => 'image/svg+xml'
+            ];
+            header('Content-Type: ' . ($types[$ext] ?? 'text/plain'));
+            readfile($assetPath);
+            exit;
+        }
+        
+        // 404 for unknown routes
         http_response_code(404);
-        echo '<!DOCTYPE html><html><head><title>No Preview</title></head>';
-        echo '<body style="font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee;">';
-        echo '<div style="text-align: center;"><h1>No Preview Available</h1><p>Start chatting to generate your website</p></div>';
-        echo '</body></html>';
-    }
-    exit;
-}
-
-/**
- * Handle setup API
- */
-function handleSetupApi(Config $config, Security $security): void
-{
-    // Pass dependencies to API
-    $GLOBALS['xbuilder_config'] = $config;
-    $GLOBALS['xbuilder_security'] = $security;
-    require __DIR__ . '/api/setup.php';
-}
-
-/**
- * Handle login API
- */
-function handleLoginApi(Config $config, Security $security): void
-{
-    $GLOBALS['xbuilder_config'] = $config;
-    $GLOBALS['xbuilder_security'] = $security;
-    require __DIR__ . '/api/login.php';
-}
-
-/**
- * Handle chat API
- */
-function handleChatApi(Config $config, Security $security): void
-{
-    $GLOBALS['xbuilder_config'] = $config;
-    $GLOBALS['xbuilder_security'] = $security;
-    require __DIR__ . '/api/chat.php';
-}
-
-/**
- * Handle upload API
- */
-function handleUploadApi(Config $config, Security $security): void
-{
-    $GLOBALS['xbuilder_config'] = $config;
-    $GLOBALS['xbuilder_security'] = $security;
-    require __DIR__ . '/api/upload.php';
-}
-
-/**
- * Handle publish API
- */
-function handlePublishApi(Config $config, Security $security): void
-{
-    $GLOBALS['xbuilder_config'] = $config;
-    $GLOBALS['xbuilder_security'] = $security;
-    require __DIR__ . '/api/publish.php';
-}
-
-/**
- * Handle clear conversation API
- */
-function handleClearApi(Config $config, Security $security): void
-{
-    header('Content-Type: application/json');
-
-    if (!$security->isAuthenticated()) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
-
-    $conversation = new Conversation();
-    $conversation->clear();
-
-    $generator = new Generator();
-    $generator->deletePreview();
-
-    echo json_encode(['success' => true]);
+        echo json_encode(['error' => 'Route not found']);
 }

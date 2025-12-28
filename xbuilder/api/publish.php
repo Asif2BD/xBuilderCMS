@@ -1,64 +1,62 @@
 <?php
 /**
  * XBuilder Publish API
- *
- * Publishes the preview site to production.
- *
- * Variables available from router:
- * - $GLOBALS['xbuilder_config']: Config instance
- * - $GLOBALS['xbuilder_security']: Security instance
+ * 
+ * Publishes the generated site to the web root
  */
-
-use XBuilder\Core\Generator;
 
 header('Content-Type: application/json');
 
-$config = $GLOBALS['xbuilder_config'];
-$security = $GLOBALS['xbuilder_security'];
+require_once dirname(__DIR__) . '/core/Generator.php';
+require_once dirname(__DIR__) . '/core/Config.php';
 
-// Check authentication
-if (!$security->isAuthenticated()) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+use XBuilder\Core\Generator;
+use XBuilder\Core\Config;
+
+// Only accept POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed']);
     exit;
 }
 
-// Verify CSRF token
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (!$security->verifyCsrfToken($csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Invalid security token']);
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input || !isset($input['html'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'HTML content required']);
     exit;
 }
 
-try {
-    $generator = new Generator();
+$html = $input['html'];
 
-    // Check if preview exists
-    if (!$generator->hasPreview()) {
-        throw new \RuntimeException('No preview to publish. Generate a website first.');
-    }
-
-    // Publish (this will create a backup if a site already exists)
-    $generator->publish();
-
-    // Update config
-    $config->setSiteGenerated(true);
-
-    // Clean old backups (keep last 10)
-    $generator->cleanOldBackups(10);
-
-    // Get stats for response
-    $stats = $generator->getStats();
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Website published successfully!',
-        'url' => '/',
-        'stats' => $stats
-    ]);
-
-} catch (\Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+if (empty(trim($html))) {
+    echo json_encode(['success' => false, 'error' => 'HTML content cannot be empty']);
+    exit;
 }
+
+$generator = new Generator();
+$config = new Config();
+
+// Save the HTML
+$result = $generator->saveHtml($html, 'index.html');
+
+if (!$result['success']) {
+    echo json_encode(['success' => false, 'error' => $result['error'] ?? 'Failed to save site']);
+    exit;
+}
+
+// Update config to mark site as generated
+$config->markSiteGenerated();
+
+// Store metadata
+$config->setSiteMetadata([
+    'published_at' => date('c'),
+    'file_size' => $result['size']
+]);
+
+echo json_encode([
+    'success' => true,
+    'url' => '/',
+    'size' => $result['size']
+]);

@@ -1,475 +1,279 @@
 <?php
 /**
  * XBuilder Generator Class
- *
- * Handles writing generated HTML to the site directory
- * and managing the published website.
- *
- * Combined best practices:
- * - Instance-based for better DI/testing
- * - Backup before publish (safety)
- * - Asset directories (css, js, images)
- * - ZIP export for download
- * - HTML validation and optimization
- * - Metadata extraction
+ * 
+ * Handles writing generated HTML to the site folder
+ * and managing site assets
  */
 
 namespace XBuilder\Core;
 
 class Generator
 {
-    private string $siteDir;
-    private string $storageDir;
-    private const PREVIEW_FILE = '_preview.html';
-    private const INDEX_FILE = 'index.html';
-    private const BACKUP_DIR = 'backups';
-
+    private string $sitePath;
+    
     public function __construct()
     {
-        $this->siteDir = dirname(__DIR__, 2) . '/site';
-        $this->storageDir = dirname(__DIR__) . '/storage';
-        $this->ensureDirectories();
+        $this->sitePath = dirname(dirname(__DIR__)) . '/site';
     }
-
+    
     /**
-     * Ensure all required directories exist
+     * Ensure site directory exists
      */
-    private function ensureDirectories(): void
+    private function ensureDirectory(): void
     {
-        $dirs = [
-            $this->siteDir,
-            $this->siteDir . '/css',
-            $this->siteDir . '/js',
-            $this->siteDir . '/images',
-            $this->storageDir . '/' . self::BACKUP_DIR
-        ];
-
+        if (!is_dir($this->sitePath)) {
+            mkdir($this->sitePath, 0755, true);
+        }
+        
+        // Create subdirectories
+        $dirs = ['assets', 'assets/css', 'assets/js', 'assets/images'];
         foreach ($dirs as $dir) {
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+            $path = $this->sitePath . '/' . $dir;
+            if (!is_dir($path)) {
+                mkdir($path, 0755, true);
             }
         }
-
-        // Create .gitkeep in site directory
-        $gitkeep = $this->siteDir . '/.gitkeep';
-        if (!file_exists($gitkeep)) {
-            file_put_contents($gitkeep, '');
-        }
     }
-
+    
     /**
-     * Get the site directory path
+     * Save HTML to site
      */
-    public function getSiteDir(): string
+    public function saveHtml(string $html, string $filename = 'index.html'): array
     {
-        return $this->siteDir;
-    }
-
-    /**
-     * Get the preview file path
-     */
-    public function getPreviewPath(): string
-    {
-        return $this->siteDir . '/' . self::PREVIEW_FILE;
-    }
-
-    /**
-     * Get the index file path
-     */
-    public function getIndexPath(): string
-    {
-        return $this->siteDir . '/' . self::INDEX_FILE;
-    }
-
-    /**
-     * Save HTML as preview (not published yet)
-     */
-    public function savePreview(string $html): bool
-    {
-        $result = file_put_contents($this->getPreviewPath(), $html, LOCK_EX);
-        return $result !== false;
-    }
-
-    /**
-     * Get the current preview HTML
-     */
-    public function getPreview(): ?string
-    {
-        $path = $this->getPreviewPath();
-
-        if (!file_exists($path)) {
-            return null;
-        }
-
-        return file_get_contents($path);
-    }
-
-    /**
-     * Publish the preview to the live site
-     * Creates a backup of any existing site first
-     */
-    public function publish(): bool
-    {
-        $previewPath = $this->getPreviewPath();
-        $indexPath = $this->getIndexPath();
-
-        if (!file_exists($previewPath)) {
-            throw new \RuntimeException('No preview to publish');
-        }
-
-        // Backup existing site if it exists
-        if (file_exists($indexPath)) {
-            $this->createBackup();
-        }
-
-        // Read preview content
-        $html = file_get_contents($previewPath);
-
-        if ($html === false) {
-            throw new \RuntimeException('Failed to read preview');
-        }
-
-        // Write to index.html
-        $result = file_put_contents($indexPath, $html, LOCK_EX);
-
-        if ($result === false) {
-            throw new \RuntimeException('Failed to publish site');
-        }
-
-        return true;
-    }
-
-    /**
-     * Create a backup of the current published site
-     */
-    private function createBackup(): bool
-    {
-        $indexPath = $this->getIndexPath();
-
-        if (!file_exists($indexPath)) {
-            return false;
-        }
-
-        $backupDir = $this->storageDir . '/' . self::BACKUP_DIR;
-        $backupFile = $backupDir . '/site_' . date('Y-m-d_His') . '.html';
-
-        return copy($indexPath, $backupFile);
-    }
-
-    /**
-     * List available backups
-     */
-    public function listBackups(): array
-    {
-        $backupDir = $this->storageDir . '/' . self::BACKUP_DIR;
-        $files = glob($backupDir . '/site_*.html');
-
-        $backups = [];
-        foreach ($files as $file) {
-            $backups[] = [
-                'filename' => basename($file),
-                'path' => $file,
-                'size' => filesize($file),
-                'date' => filemtime($file)
+        $this->ensureDirectory();
+        
+        // Validate HTML
+        if (!$this->validateHtml($html)) {
+            return [
+                'success' => false,
+                'error' => 'Invalid HTML structure'
             ];
         }
-
-        // Sort by date descending
-        usort($backups, fn($a, $b) => $b['date'] - $a['date']);
-
-        return $backups;
+        
+        // Clean up HTML
+        $html = $this->cleanHtml($html);
+        
+        // Save the file
+        $filePath = $this->sitePath . '/' . $filename;
+        $result = file_put_contents($filePath, $html);
+        
+        if ($result === false) {
+            return [
+                'success' => false,
+                'error' => 'Failed to write file'
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'path' => $filePath,
+            'size' => $result,
+            'url' => '/' . $filename
+        ];
     }
-
+    
     /**
-     * Restore a backup
+     * Validate basic HTML structure
      */
-    public function restoreBackup(string $filename): bool
+    private function validateHtml(string $html): bool
     {
-        $backupDir = $this->storageDir . '/' . self::BACKUP_DIR;
-        $backupPath = $backupDir . '/' . basename($filename);
-
-        if (!file_exists($backupPath)) {
-            throw new \RuntimeException('Backup not found');
-        }
-
-        // Backup current before restoring
-        if ($this->isPublished()) {
-            $this->createBackup();
-        }
-
-        $html = file_get_contents($backupPath);
-        return file_put_contents($this->getIndexPath(), $html, LOCK_EX) !== false;
+        // Check for basic HTML structure
+        $hasDoctype = stripos($html, '<!DOCTYPE html>') !== false || stripos($html, '<!doctype html>') !== false;
+        $hasHtmlTag = stripos($html, '<html') !== false && stripos($html, '</html>') !== false;
+        $hasHead = stripos($html, '<head') !== false && stripos($html, '</head>') !== false;
+        $hasBody = stripos($html, '<body') !== false && stripos($html, '</body>') !== false;
+        
+        return $hasDoctype && $hasHtmlTag && $hasHead && $hasBody;
     }
-
+    
     /**
-     * Check if a site has been published
+     * Clean up HTML
      */
-    public function isPublished(): bool
+    private function cleanHtml(string $html): string
     {
-        return file_exists($this->getIndexPath());
-    }
-
-    /**
-     * Check if a preview exists
-     */
-    public function hasPreview(): bool
-    {
-        return file_exists($this->getPreviewPath());
-    }
-
-    /**
-     * Get the published site HTML
-     */
-    public function getPublished(): ?string
-    {
-        $path = $this->getIndexPath();
-
-        if (!file_exists($path)) {
-            return null;
+        // Remove any markdown code block markers that might have slipped through
+        $html = preg_replace('/^```[\w-]*\s*/m', '', $html);
+        $html = preg_replace('/```\s*$/m', '', $html);
+        
+        // Ensure proper DOCTYPE
+        if (stripos($html, '<!DOCTYPE html>') === false && stripos($html, '<!doctype html>') === false) {
+            $html = "<!DOCTYPE html>\n" . $html;
         }
-
-        return file_get_contents($path);
-    }
-
-    /**
-     * Delete the preview
-     */
-    public function deletePreview(): bool
-    {
-        $path = $this->getPreviewPath();
-
-        if (file_exists($path)) {
-            return unlink($path);
-        }
-
-        return true;
-    }
-
-    /**
-     * Delete the published site
-     */
-    public function deletePublished(): bool
-    {
-        $path = $this->getIndexPath();
-
-        if (file_exists($path)) {
-            return unlink($path);
-        }
-
-        return true;
-    }
-
-    /**
-     * Validate HTML structure
-     */
-    public function validateHtml(string $html): array
-    {
-        $errors = [];
-
-        // Check for DOCTYPE
-        if (stripos($html, '<!DOCTYPE html>') === false) {
-            $errors[] = 'Missing DOCTYPE declaration';
-        }
-
-        // Check for html tag
-        if (stripos($html, '<html') === false) {
-            $errors[] = 'Missing <html> tag';
-        }
-
-        // Check for head tag
-        if (stripos($html, '<head>') === false && stripos($html, '<head ') === false) {
-            $errors[] = 'Missing <head> tag';
-        }
-
-        // Check for body tag
-        if (stripos($html, '<body>') === false && stripos($html, '<body ') === false) {
-            $errors[] = 'Missing <body> tag';
-        }
-
-        // Check for closing tags
-        if (stripos($html, '</html>') === false) {
-            $errors[] = 'Missing closing </html> tag';
-        }
-
-        // Check for viewport meta tag
-        if (stripos($html, 'viewport') === false) {
-            $errors[] = 'Missing viewport meta tag (not mobile-friendly)';
-        }
-
-        // Check for title
-        if (!preg_match('/<title>.+<\/title>/i', $html)) {
-            $errors[] = 'Missing or empty title tag';
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Optimize HTML (minify, etc.)
-     */
-    public function optimizeHtml(string $html): string
-    {
-        // Remove HTML comments (except IE conditionals)
-        $html = preg_replace('/<!--(?!\[if).*?-->/s', '', $html);
-
-        // Remove extra whitespace between tags
-        $html = preg_replace('/>\s+</', '> <', $html);
-
-        // Collapse multiple spaces to single space
-        $html = preg_replace('/\s+/', ' ', $html);
-
-        // Restore newlines after certain tags for readability
-        $html = preg_replace('/<\/(head|body|html|section|header|footer|nav|main|article|aside|div)>/i', "</\\1>\n", $html);
-
+        
         return trim($html);
     }
-
+    
     /**
-     * Extract metadata from HTML
+     * Create a preview version (same as main but can be used for preview iframe)
      */
-    public function extractMetadata(string $html): array
+    public function savePreview(string $html): array
     {
-        $metadata = [
-            'title' => null,
-            'description' => null,
-            'fonts' => [],
-            'colors' => [],
+        $this->ensureDirectory();
+        
+        // Validate HTML
+        if (!$this->validateHtml($html)) {
+            return [
+                'success' => false,
+                'error' => 'Invalid HTML structure'
+            ];
+        }
+        
+        // Save to preview file
+        $html = $this->cleanHtml($html);
+        $previewPath = $this->sitePath . '/_preview.html';
+        $result = file_put_contents($previewPath, $html);
+        
+        if ($result === false) {
+            return [
+                'success' => false,
+                'error' => 'Failed to write preview file'
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'path' => $previewPath,
+            'url' => '/site/_preview.html'
         ];
-
-        // Extract title
-        if (preg_match('/<title>(.+?)<\/title>/is', $html, $matches)) {
-            $metadata['title'] = trim(strip_tags($matches[1]));
-        }
-
-        // Extract meta description
-        if (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']/i', $html, $matches)) {
-            $metadata['description'] = trim($matches[1]);
-        }
-
-        // Extract Google Fonts
-        if (preg_match_all('/fonts\.googleapis\.com\/css2?\?family=([^"\'&]+)/i', $html, $matches)) {
-            foreach ($matches[1] as $font) {
-                $fontName = urldecode(explode(':', $font)[0]);
-                $fontName = str_replace('+', ' ', $fontName);
-                $metadata['fonts'][] = $fontName;
-            }
-            $metadata['fonts'] = array_unique($metadata['fonts']);
-        }
-
-        // Extract Tailwind colors used (basic detection)
-        if (preg_match_all('/(?:bg|text|border)-([a-z]+-\d{2,3})/i', $html, $matches)) {
-            $metadata['colors'] = array_unique($matches[1]);
-        }
-
-        return $metadata;
     }
-
+    
+    /**
+     * Publish preview to main site
+     */
+    public function publishPreview(): array
+    {
+        $previewPath = $this->sitePath . '/_preview.html';
+        $mainPath = $this->sitePath . '/index.html';
+        
+        if (!file_exists($previewPath)) {
+            return [
+                'success' => false,
+                'error' => 'No preview to publish'
+            ];
+        }
+        
+        // Backup existing if any
+        if (file_exists($mainPath)) {
+            $backupPath = $this->sitePath . '/_backup_' . date('Y-m-d_H-i-s') . '.html';
+            copy($mainPath, $backupPath);
+        }
+        
+        // Copy preview to main
+        $result = copy($previewPath, $mainPath);
+        
+        if (!$result) {
+            return [
+                'success' => false,
+                'error' => 'Failed to publish'
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'url' => '/'
+        ];
+    }
+    
+    /**
+     * Check if site exists
+     */
+    public function siteExists(): bool
+    {
+        return file_exists($this->sitePath . '/index.html');
+    }
+    
+    /**
+     * Check if preview exists
+     */
+    public function previewExists(): bool
+    {
+        return file_exists($this->sitePath . '/_preview.html');
+    }
+    
+    /**
+     * Get current site HTML
+     */
+    public function getCurrentHtml(): ?string
+    {
+        $mainPath = $this->sitePath . '/index.html';
+        
+        if (file_exists($mainPath)) {
+            return file_get_contents($mainPath);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get preview HTML
+     */
+    public function getPreviewHtml(): ?string
+    {
+        $previewPath = $this->sitePath . '/_preview.html';
+        
+        if (file_exists($previewPath)) {
+            return file_get_contents($previewPath);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Delete site
+     */
+    public function deleteSite(): bool
+    {
+        if (!is_dir($this->sitePath)) {
+            return true;
+        }
+        
+        // Remove all files in site directory
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($this->sitePath, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        
+        foreach ($files as $file) {
+            if ($file->isDir()) {
+                rmdir($file->getRealPath());
+            } else {
+                unlink($file->getRealPath());
+            }
+        }
+        
+        return rmdir($this->sitePath);
+    }
+    
     /**
      * Get site statistics
      */
     public function getStats(): array
     {
         $stats = [
-            'has_preview' => $this->hasPreview(),
-            'is_published' => $this->isPublished(),
-            'preview_size' => 0,
-            'published_size' => 0,
-            'backup_count' => 0,
-            'last_published' => null,
+            'exists' => $this->siteExists(),
+            'preview_exists' => $this->previewExists(),
+            'files' => [],
+            'total_size' => 0
         ];
-
-        if ($stats['has_preview']) {
-            $stats['preview_size'] = filesize($this->getPreviewPath());
+        
+        if (is_dir($this->sitePath)) {
+            $files = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($this->sitePath, \RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            
+            foreach ($files as $file) {
+                if ($file->isFile()) {
+                    $relativePath = str_replace($this->sitePath . '/', '', $file->getRealPath());
+                    $stats['files'][] = [
+                        'name' => $relativePath,
+                        'size' => $file->getSize()
+                    ];
+                    $stats['total_size'] += $file->getSize();
+                }
+            }
         }
-
-        if ($stats['is_published']) {
-            $path = $this->getIndexPath();
-            $stats['published_size'] = filesize($path);
-            $stats['last_published'] = date('c', filemtime($path));
-        }
-
-        $stats['backup_count'] = count($this->listBackups());
-
+        
         return $stats;
-    }
-
-    /**
-     * Export site as ZIP
-     */
-    public function exportAsZip(): ?string
-    {
-        if (!$this->isPublished()) {
-            return null;
-        }
-
-        $zipPath = $this->storageDir . '/export_' . date('Y-m-d_His') . '.zip';
-        $zip = new \ZipArchive();
-
-        if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
-            return null;
-        }
-
-        // Add index.html
-        $zip->addFile($this->getIndexPath(), 'index.html');
-
-        // Add any other files in site directory (css, js, images)
-        $this->addDirectoryToZip($zip, $this->siteDir, '');
-
-        $zip->close();
-
-        return $zipPath;
-    }
-
-    /**
-     * Recursively add directory to ZIP
-     */
-    private function addDirectoryToZip(\ZipArchive $zip, string $dir, string $basePath): void
-    {
-        $files = scandir($dir);
-
-        foreach ($files as $file) {
-            if ($file === '.' || $file === '..') {
-                continue;
-            }
-
-            $filePath = $dir . '/' . $file;
-            $zipPath = $basePath ? $basePath . '/' . $file : $file;
-
-            // Skip preview and gitkeep
-            if ($file === self::PREVIEW_FILE || $file === '.gitkeep') {
-                continue;
-            }
-
-            if (is_dir($filePath)) {
-                $zip->addEmptyDir($zipPath);
-                $this->addDirectoryToZip($zip, $filePath, $zipPath);
-            } else {
-                $zip->addFile($filePath, $zipPath);
-            }
-        }
-    }
-
-    /**
-     * Clean old backups (keep last N)
-     */
-    public function cleanOldBackups(int $keepCount = 10): int
-    {
-        $backups = $this->listBackups();
-        $deleted = 0;
-
-        if (count($backups) <= $keepCount) {
-            return 0;
-        }
-
-        // Delete oldest backups beyond keepCount
-        $toDelete = array_slice($backups, $keepCount);
-
-        foreach ($toDelete as $backup) {
-            if (unlink($backup['path'])) {
-                $deleted++;
-            }
-        }
-
-        return $deleted;
     }
 }

@@ -1,97 +1,54 @@
 # XBuilder - Apache Configuration
-# Enable URL rewriting for clean URLs
+# Enables clean URLs and routes all requests through index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
-
-    # Redirect to HTTPS (uncomment in production)
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-    # Handle Authorization Header
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Don't rewrite files or directories
+    
+    # Don't rewrite requests for actual files or directories
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-
-    # Rewrite everything to index.php
-    RewriteRule ^ index.php [L]
+    
+    # Route everything through index.php
+    RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
-# Protect storage directory - deny all access
-<IfModule mod_rewrite.c>
-    RewriteRule ^xbuilder/storage - [F,L]
-</IfModule>
-
-# Alternative protection for storage (fallback)
-<FilesMatch "^xbuilder/storage">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order deny,allow
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Protect sensitive files
-<FilesMatch "(^\.htaccess|\.git|composer\.json|composer\.lock|package\.json|CLAUDE\.md)$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order deny,allow
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-# Security Headers
+# Security headers
 <IfModule mod_headers.c>
-    # Prevent MIME type sniffing
     Header set X-Content-Type-Options "nosniff"
-
-    # XSS Protection
-    Header set X-XSS-Protection "1; mode=block"
-
-    # Prevent clickjacking
     Header set X-Frame-Options "SAMEORIGIN"
-
-    # Referrer Policy
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set X-XSS-Protection "1; mode=block"
 </IfModule>
 
-# Disable directory browsing
+# Disable directory listing
 Options -Indexes
 
-# Set default charset
-AddDefaultCharset UTF-8
+# Protect sensitive files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
 
-# PHP settings (if allowed)
-<IfModule mod_php.c>
-    php_value upload_max_filesize 10M
-    php_value post_max_size 12M
-    php_value max_execution_time 120
-</IfModule>
+<FilesMatch "\.(json|log|key)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
 
 # Enable compression
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
 </IfModule>
 
 # Cache static assets
 <IfModule mod_expires.c>
     ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
     ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/webp "access plus 1 year"
     ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 year"
     ExpiresByType font/woff "access plus 1 year"
     ExpiresByType font/woff2 "access plus 1 year"
 </IfModule>

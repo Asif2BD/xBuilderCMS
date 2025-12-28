@@ -1,628 +1,617 @@
-<?php
-/**
- * XBuilder Chat Interface View
- *
- * Main interface for chatting with AI and building websites.
- *
- * Variables available from router:
- * - $security: Security instance
- * - $config: Config instance
- */
-
-use XBuilder\Core\Conversation;
-use XBuilder\Core\Generator;
-use XBuilder\Core\AI;
-
-$csrfToken = $security->generateCsrfToken();
-$conversation = new Conversation();
-$generator = new Generator();
-
-$messages = $conversation->getMessages();
-$generatedHtml = $conversation->getGeneratedHtml();
-$hasPreview = $generator->hasPreview();
-$isPublished = $generator->isPublished();
-$provider = $config->getAiProvider();
-$providerName = AI::getProviderName($provider);
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XBuilder - Create Your Website</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <title>XBuilder - AI Website Builder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            900: '#0a0a0f',
+                            800: '#12121a',
+                            700: '#1a1a25',
+                            600: '#252533',
+                            500: '#32324a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * { font-family: 'Space Grotesk', sans-serif; }
-        code, pre, .code { font-family: 'JetBrains Mono', monospace; }
-
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        body {
+            background: #0a0a0f;
         }
-
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .chat-container {
-            height: calc(100vh - 180px);
-        }
-
+        
+        /* Chat messages */
         .message {
-            animation: messageIn 0.3s ease forwards;
+            animation: messageIn 0.3s ease-out;
         }
-
+        
         @keyframes messageIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        .user-message {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        
+        /* Typing indicator */
+        .typing-dot {
+            animation: typingBounce 1.4s infinite ease-in-out both;
         }
-
-        .ai-message {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
-
-        .typing-indicator span {
-            animation: typing 1.4s infinite;
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #3b82f6;
+        
+        /* Loading spinner */
+        .loading-spinner {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #6366f1;
             border-radius: 50%;
-            margin: 0 2px;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
         }
-
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
-            30% { transform: translateY(-5px); opacity: 1; }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            transition: all 0.3s ease;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
-        }
-
-        textarea:focus, input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-
-        .preview-frame {
-            background: white;
-            border-radius: 8px;
-        }
-
-        .tab-active {
-            border-bottom: 2px solid #3b82f6;
-            color: #3b82f6;
-        }
-
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
-
-        /* Code block styling */
+        
+        /* Code syntax highlighting (basic) */
         .code-block {
-            background: #1e1e2e;
-            border-radius: 8px;
+            background: #1a1a25;
+            border-radius: 0.5rem;
             overflow: hidden;
         }
-
+        
         .code-block pre {
             padding: 1rem;
             overflow-x: auto;
             font-size: 0.875rem;
             line-height: 1.5;
         }
+        
+        /* Preview iframe */
+        #previewFrame {
+            background: white;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #32324a;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a6a;
+        }
+        
+        /* Drag and drop */
+        .drop-zone.drag-over {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Tab active state */
+        .tab-btn.active {
+            color: white;
+            border-color: #6366f1;
+        }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-white">
+<body class="font-sans text-white h-screen flex flex-col">
     <!-- Header -->
-    <header class="glass border-b border-white/10">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <h1 class="text-xl font-bold">
-                    <span class="text-blue-400">X</span>Builder
-                </h1>
-                <span class="text-xs text-gray-500 hidden sm:inline">Powered by <?php echo $security->sanitize($providerName); ?></span>
+    <header class="bg-dark-800 border-b border-dark-600 px-4 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🚀</span>
+            <h1 class="text-lg font-semibold">XBuilder</h1>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button onclick="startNewConversation()" 
+                    class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                New
+            </button>
+            
+            <a href="/xbuilder/logout" 
+               class="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition">
+                Logout
+            </a>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Chat Panel -->
+        <div class="w-1/2 flex flex-col border-r border-dark-600">
+            <!-- Messages -->
+            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Welcome message will be added by JS -->
             </div>
-
-            <div class="flex items-center space-x-3">
-                <?php if ($hasPreview): ?>
-                <button onclick="publishSite()" id="publishBtn" class="btn-success px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2">
+            
+            <!-- Upload Area (hidden by default) -->
+            <div id="uploadArea" class="hidden px-4 pb-2">
+                <div class="drop-zone border-2 border-dashed border-dark-500 rounded-xl p-4 text-center transition-colors">
+                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt,.json">
+                    <label for="fileInput" class="cursor-pointer">
+                        <div class="text-3xl mb-2">📄</div>
+                        <p class="text-sm text-gray-400">
+                            Drop your CV/document here or <span class="text-indigo-400">click to browse</span>
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, TXT supported</p>
+                    </label>
+                </div>
+                <div id="uploadStatus" class="hidden mt-2 text-sm"></div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-4 border-t border-dark-600 shrink-0">
+                <div class="flex gap-2">
+                    <button onclick="toggleUpload()" 
+                            class="p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition" 
+                            title="Upload document">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="flex-1 relative">
+                        <textarea id="userInput" 
+                                  rows="1"
+                                  class="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-xl focus:border-indigo-500 focus:outline-none resize-none"
+                                  placeholder="Describe the website you want to create..."
+                                  onkeydown="handleKeydown(event)"
+                                  oninput="autoResize(this)"></textarea>
+                    </div>
+                    
+                    <button onclick="sendMessage()" id="sendBtn"
+                            class="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Preview Panel -->
+        <div class="w-1/2 flex flex-col bg-dark-900">
+            <!-- Tabs -->
+            <div class="flex border-b border-dark-600 shrink-0">
+                <button onclick="showTab('preview')" 
+                        class="tab-btn active px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-white transition"
+                        data-tab="preview">
+                    Preview
+                </button>
+                <button onclick="showTab('code')" 
+                        class="tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-white transition"
+                        data-tab="code">
+                    Code
+                </button>
+                
+                <div class="flex-1"></div>
+                
+                <button onclick="publishSite()" id="publishBtn"
+                        class="hidden m-2 px-4 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded-lg transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
-                    <span>Publish</span>
+                    Publish
                 </button>
-                <?php endif; ?>
-
-                <button onclick="clearConversation()" class="btn-secondary px-3 py-2 rounded-lg text-sm" title="Start New">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                </button>
-
-                <a href="/xbuilder/logout" class="btn-secondary px-3 py-2 rounded-lg text-sm" title="Logout">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
-                </a>
             </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 py-4">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 chat-container">
-            <!-- Chat Panel -->
-            <div class="glass rounded-2xl flex flex-col overflow-hidden">
-                <!-- Messages -->
-                <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                    <?php if (empty($messages)): ?>
-                    <!-- Welcome Message -->
-                    <div class="ai-message message rounded-2xl p-4 max-w-[85%]">
-                        <p class="text-gray-300">
-                            Hello! I'm XBuilder, your AI-powered website designer. I'll help you create a stunning, unique website through our conversation.
-                        </p>
-                        <p class="text-gray-300 mt-3">
-                            To get started, tell me:
-                        </p>
-                        <ul class="text-gray-400 mt-2 space-y-1 text-sm">
-                            <li>What type of website do you want? (portfolio, business, personal)</li>
-                            <li>Or upload your CV/resume and I'll create a professional portfolio for you!</li>
-                        </ul>
-                    </div>
-                    <?php else: ?>
-                        <?php foreach ($messages as $msg): ?>
-                        <div class="<?php echo $msg['role'] === 'user' ? 'user-message ml-auto' : 'ai-message'; ?> message rounded-2xl p-4 max-w-[85%]">
-                            <div class="whitespace-pre-wrap"><?php echo nl2br($security->sanitize($msg['content'])); ?></div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-
-                    <!-- Typing Indicator (hidden by default) -->
-                    <div id="typingIndicator" class="ai-message message rounded-2xl p-4 max-w-[85%] hidden">
-                        <div class="typing-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
+            
+            <!-- Preview Content -->
+            <div id="previewTab" class="flex-1 overflow-hidden">
+                <div id="previewPlaceholder" class="h-full flex items-center justify-center text-gray-500">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4 opacity-50">🎨</div>
+                        <p>Your website preview will appear here</p>
+                        <p class="text-sm mt-2">Start chatting to generate your site</p>
                     </div>
                 </div>
-
-                <!-- Input Area -->
-                <div class="p-4 border-t border-white/10">
-                    <form id="chatForm" class="flex space-x-2">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
-
-                        <!-- File Upload Button -->
-                        <label class="btn-secondary p-3 rounded-xl cursor-pointer flex-shrink-0" title="Upload CV/Resume">
-                            <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt,.md">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                            </svg>
-                        </label>
-
-                        <!-- Message Input -->
-                        <textarea
-                            id="messageInput"
-                            name="message"
-                            class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 resize-none"
-                            placeholder="Describe your website..."
-                            rows="1"
-                        ></textarea>
-
-                        <!-- Send Button -->
-                        <button type="submit" id="sendBtn" class="btn-primary p-3 rounded-xl flex-shrink-0">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                            </svg>
-                        </button>
-                    </form>
-
-                    <!-- File upload indicator -->
-                    <div id="fileIndicator" class="hidden mt-2 text-sm text-gray-400 flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <span id="fileName"></span>
-                        <button type="button" onclick="clearFile()" class="ml-2 text-red-400 hover:text-red-300">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                <iframe id="previewFrame" class="hidden w-full h-full border-0"></iframe>
             </div>
-
-            <!-- Preview Panel -->
-            <div class="glass rounded-2xl flex flex-col overflow-hidden">
-                <!-- Tabs -->
-                <div class="flex border-b border-white/10">
-                    <button onclick="showTab('preview')" id="tabPreview" class="tab-active px-6 py-3 text-sm font-medium">
-                        Preview
-                    </button>
-                    <button onclick="showTab('code')" id="tabCode" class="px-6 py-3 text-sm font-medium text-gray-400 hover:text-white">
-                        Code
-                    </button>
-                    <?php if ($isPublished): ?>
-                    <a href="/" target="_blank" class="ml-auto px-4 py-3 text-sm text-blue-400 hover:text-blue-300 flex items-center">
-                        View Live Site
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                        </svg>
-                    </a>
-                    <?php endif; ?>
+            
+            <!-- Code Content -->
+            <div id="codeTab" class="hidden flex-1 overflow-hidden">
+                <div id="codePlaceholder" class="h-full flex items-center justify-center text-gray-500">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4 opacity-50">📝</div>
+                        <p>Generated code will appear here</p>
+                    </div>
                 </div>
-
-                <!-- Preview Content -->
-                <div id="previewContent" class="flex-1 overflow-hidden">
-                    <?php if ($hasPreview): ?>
-                    <iframe id="previewFrame" src="/xbuilder/preview" class="w-full h-full preview-frame"></iframe>
-                    <?php else: ?>
-                    <div class="h-full flex items-center justify-center text-gray-500">
-                        <div class="text-center">
-                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                            </svg>
-                            <p>Your website preview will appear here</p>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Code Content (hidden by default) -->
-                <div id="codeContent" class="flex-1 overflow-auto hidden">
-                    <?php if ($generatedHtml): ?>
-                    <div class="code-block h-full">
-                        <pre class="text-gray-300 h-full"><code id="codeDisplay"><?php echo $security->sanitize($generatedHtml); ?></code></pre>
-                    </div>
-                    <?php else: ?>
-                    <div class="h-full flex items-center justify-center text-gray-500">
-                        <p>No code generated yet</p>
-                    </div>
-                    <?php endif; ?>
+                <div id="codeContent" class="hidden h-full overflow-auto">
+                    <pre class="p-4 font-mono text-sm text-gray-300 whitespace-pre-wrap"></pre>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-4 right-4 transform translate-y-20 opacity-0 transition-all duration-300">
-        <div class="glass rounded-xl px-6 py-4 flex items-center space-x-3">
-            <span id="toastIcon"></span>
-            <span id="toastMessage"></span>
-        </div>
-    </div>
-
+    
     <script>
         // State
-        let selectedFile = null;
+        let conversationHistory = [];
+        let generatedHtml = null;
         let isLoading = false;
-
-        // Elements
-        const messagesEl = document.getElementById('messages');
-        const chatForm = document.getElementById('chatForm');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const fileInput = document.getElementById('fileInput');
-        const typingIndicator = document.getElementById('typingIndicator');
-
-        // Auto-resize textarea
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        let uploadedDocument = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversation();
+            setupDropZone();
         });
-
-        // Enter to send (Shift+Enter for new line)
-        messageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                chatForm.dispatchEvent(new Event('submit'));
-            }
-        });
-
-        // File selection
-        fileInput.addEventListener('change', function() {
-            if (this.files.length > 0) {
-                selectedFile = this.files[0];
-                document.getElementById('fileName').textContent = selectedFile.name;
-                document.getElementById('fileIndicator').classList.remove('hidden');
-            }
-        });
-
-        function clearFile() {
-            selectedFile = null;
-            fileInput.value = '';
-            document.getElementById('fileIndicator').classList.add('hidden');
-        }
-
-        // Tab switching
-        function showTab(tab) {
-            const previewContent = document.getElementById('previewContent');
-            const codeContent = document.getElementById('codeContent');
-            const tabPreview = document.getElementById('tabPreview');
-            const tabCode = document.getElementById('tabCode');
-
-            if (tab === 'preview') {
-                previewContent.classList.remove('hidden');
-                codeContent.classList.add('hidden');
-                tabPreview.classList.add('tab-active');
-                tabCode.classList.remove('tab-active');
-                tabCode.classList.add('text-gray-400');
-            } else {
-                previewContent.classList.add('hidden');
-                codeContent.classList.remove('hidden');
-                tabCode.classList.add('tab-active');
-                tabPreview.classList.remove('tab-active');
-                tabPreview.classList.add('text-gray-400');
-            }
-        }
-
-        // Add message to chat
-        function addMessage(role, content) {
-            const div = document.createElement('div');
-            div.className = `${role === 'user' ? 'user-message ml-auto' : 'ai-message'} message rounded-2xl p-4 max-w-[85%]`;
-            div.innerHTML = `<div class="whitespace-pre-wrap">${escapeHtml(content)}</div>`;
-            messagesEl.insertBefore(div, typingIndicator);
-            scrollToBottom();
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML.replace(/\n/g, '<br>');
-        }
-
-        function scrollToBottom() {
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-
-        function showTyping() {
-            typingIndicator.classList.remove('hidden');
-            scrollToBottom();
-        }
-
-        function hideTyping() {
-            typingIndicator.classList.add('hidden');
-        }
-
-        // Toast notifications
-        function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const msg = document.getElementById('toastMessage');
-
-            const icons = {
-                success: '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
-                error: '<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
-                info: '<svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
-            };
-
-            icon.innerHTML = icons[type] || icons.info;
-            msg.textContent = message;
-
-            toast.classList.remove('translate-y-20', 'opacity-0');
-
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-
-        // Form submission
-        chatForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            if (isLoading) return;
-
-            const message = messageInput.value.trim();
-            if (!message && !selectedFile) return;
-
-            isLoading = true;
-            sendBtn.disabled = true;
-
-            // Add user message
-            if (message) {
-                addMessage('user', message);
-            }
-            if (selectedFile) {
-                addMessage('user', `[Uploaded: ${selectedFile.name}]`);
-            }
-
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            showTyping();
-
+        
+        // Load existing conversation
+        async function loadConversation() {
             try {
-                let response;
-
-                if (selectedFile) {
-                    // Upload file first
-                    const uploadData = new FormData();
-                    uploadData.append('file', selectedFile);
-                    uploadData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-                    const uploadResponse = await fetch('/xbuilder/api/upload', {
-                        method: 'POST',
-                        body: uploadData
-                    });
-
-                    const uploadResult = await uploadResponse.json();
-
-                    if (!uploadResult.success) {
-                        throw new Error(uploadResult.error || 'Upload failed');
-                    }
-
-                    clearFile();
-
-                    // Now send message with uploaded content
-                    const chatData = new FormData();
-                    chatData.append('message', message || 'Please create a website based on my uploaded document.');
-                    chatData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-                    response = await fetch('/xbuilder/api/chat', {
-                        method: 'POST',
-                        body: chatData
-                    });
-                } else {
-                    // Just send message
-                    const formData = new FormData();
-                    formData.append('message', message);
-                    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-                    response = await fetch('/xbuilder/api/chat', {
-                        method: 'POST',
-                        body: formData
-                    });
-                }
-
+                const response = await fetch('/xbuilder/api/chat?action=load');
                 const data = await response.json();
-                hideTyping();
-
-                if (data.success) {
-                    addMessage('assistant', data.content);
-
-                    // Update preview if HTML was generated
-                    if (data.hasHtml) {
-                        updatePreview(data.html);
-                        showToast('Website preview updated!', 'success');
-
-                        // Show publish button if not already visible
-                        if (!document.getElementById('publishBtn')) {
-                            location.reload();
-                        }
+                
+                if (data.messages && data.messages.length > 0) {
+                    conversationHistory = data.messages;
+                    data.messages.forEach(msg => {
+                        addMessageToUI(msg.role, msg.content, false);
+                    });
+                    
+                    if (data.generated_html) {
+                        generatedHtml = data.generated_html;
+                        showPreview(generatedHtml);
                     }
                 } else {
-                    throw new Error(data.error || 'Failed to get response');
+                    // Show welcome message
+                    addMessageToUI('assistant', getWelcomeMessage(), false);
                 }
             } catch (error) {
-                hideTyping();
-                addMessage('assistant', 'Sorry, something went wrong: ' + error.message);
-                showToast(error.message, 'error');
-            }
-
-            isLoading = false;
-            sendBtn.disabled = false;
-            messageInput.focus();
-        });
-
-        function updatePreview(html) {
-            const previewContent = document.getElementById('previewContent');
-            const codeContent = document.getElementById('codeContent');
-
-            // Update preview iframe
-            let iframe = document.getElementById('previewFrame');
-            if (!iframe) {
-                previewContent.innerHTML = '<iframe id="previewFrame" src="/xbuilder/preview" class="w-full h-full preview-frame"></iframe>';
-                iframe = document.getElementById('previewFrame');
-            }
-            iframe.src = '/xbuilder/preview?' + Date.now();
-
-            // Update code display
-            const codeDisplay = document.getElementById('codeDisplay');
-            if (codeDisplay) {
-                codeDisplay.textContent = html;
-            } else {
-                codeContent.innerHTML = `<div class="code-block h-full"><pre class="text-gray-300 h-full"><code id="codeDisplay">${escapeHtml(html)}</code></pre></div>`;
+                addMessageToUI('assistant', getWelcomeMessage(), false);
             }
         }
+        
+        function getWelcomeMessage() {
+            return `Hey! 👋 I'm excited to help you create a website.
 
-        // Publish site
-        async function publishSite() {
-            const btn = document.getElementById('publishBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+What are we building today - a portfolio, a business site, or something else?
 
+If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll craft something that really captures who you are.`;
+        }
+        
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message || isLoading) return;
+            
+            // Add user message to UI
+            addMessageToUI('user', message);
+            conversationHistory.push({ role: 'user', content: message });
+            
+            // Clear input
+            input.value = '';
+            autoResize(input);
+            
+            // Show typing indicator
+            showTypingIndicator();
+            isLoading = true;
+            
             try {
-                const formData = new FormData();
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
+                const response = await fetch('/xbuilder/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        history: conversationHistory.slice(0, -1), // Don't include the message we just added
+                        document: uploadedDocument
+                    })
+                });
+                
+                const data = await response.json();
+                
+                hideTypingIndicator();
+                isLoading = false;
+                
+                if (data.success) {
+                    // Add AI response to UI
+                    addMessageToUI('assistant', data.message);
+                    conversationHistory.push({ role: 'assistant', content: data.message });
+                    
+                    // Check if HTML was generated
+                    if (data.html) {
+                        generatedHtml = data.html;
+                        showPreview(generatedHtml);
+                        document.getElementById('publishBtn').classList.remove('hidden');
+                    }
+                } else {
+                    addMessageToUI('assistant', '⚠️ ' + (data.error || 'Something went wrong. Please try again.'));
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                isLoading = false;
+                addMessageToUI('assistant', '⚠️ Connection error. Please check your internet and try again.');
+            }
+            
+            // Clear uploaded document after first use
+            uploadedDocument = null;
+        }
+        
+        // Add message to UI
+        function addMessageToUI(role, content, animate = true) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            
+            messageDiv.className = `message ${role === 'user' ? 'ml-auto max-w-[85%]' : 'max-w-[85%]'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user' 
+                ? 'bg-indigo-600 rounded-2xl rounded-br-md px-4 py-3'
+                : 'bg-dark-700 rounded-2xl rounded-bl-md px-4 py-3';
+            
+            // Parse markdown-like formatting
+            bubble.innerHTML = formatMessage(content);
+            
+            messageDiv.appendChild(bubble);
+            messagesDiv.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Format message with basic markdown
+        function formatMessage(content) {
+            // Escape HTML
+            let html = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Code blocks (remove from display, we'll show in code tab)
+            html = html.replace(/```[\w-]*\n([\s\S]*?)```/g, '<div class="my-2 p-2 bg-dark-800 rounded text-sm text-indigo-300">✨ Website code generated! Check the Preview tab.</div>');
+            
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-dark-800 px-1.5 py-0.5 rounded text-sm">$1</code>');
+            
+            // Line breaks
+            html = html.replace(/\n/g, '<br>');
+            
+            return html;
+        }
+        
+        // Typing indicator
+        function showTypingIndicator() {
+            const messagesDiv = document.getElementById('messages');
+            const indicator = document.createElement('div');
+            indicator.id = 'typingIndicator';
+            indicator.className = 'message max-w-[85%]';
+            indicator.innerHTML = `
+                <div class="bg-dark-700 rounded-2xl rounded-bl-md px-4 py-3 flex gap-1">
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                </div>
+            `;
+            messagesDiv.appendChild(indicator);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+        
+        // Preview
+        function showPreview(html) {
+            const placeholder = document.getElementById('previewPlaceholder');
+            const frame = document.getElementById('previewFrame');
+            const codeContent = document.getElementById('codeContent');
+            const codePlaceholder = document.getElementById('codePlaceholder');
+            
+            // Update preview
+            placeholder.classList.add('hidden');
+            frame.classList.remove('hidden');
+            frame.srcdoc = html;
+            
+            // Update code view
+            codePlaceholder.classList.add('hidden');
+            codeContent.classList.remove('hidden');
+            codeContent.querySelector('pre').textContent = html;
+        }
+        
+        // Tabs
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            
+            document.getElementById('previewTab').classList.toggle('hidden', tab !== 'preview');
+            document.getElementById('codeTab').classList.toggle('hidden', tab !== 'code');
+        }
+        
+        // Publish
+        async function publishSite() {
+            if (!generatedHtml) return;
+            
+            const btn = document.getElementById('publishBtn');
+            btn.innerHTML = '<div class="loading-spinner"></div><span>Publishing...</span>';
+            btn.disabled = true;
+            
+            try {
                 const response = await fetch('/xbuilder/api/publish', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: generatedHtml })
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (data.success) {
-                    showToast('Website published successfully!', 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    btn.innerHTML = '✓ Published!';
+                    btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    btn.classList.add('bg-emerald-600');
+                    
+                    // Show success message
+                    addMessageToUI('assistant', `🎉 **Your website is live!**\n\nVisit it at: [${window.location.origin}](${window.location.origin})\n\nYou can continue chatting to make changes, or close this tab.`);
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                        btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                        btn.classList.remove('bg-emerald-600');
+                        btn.disabled = false;
+                    }, 3000);
                 } else {
-                    throw new Error(data.error || 'Publish failed');
+                    alert('Failed to publish: ' + (data.error || 'Unknown error'));
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                    btn.disabled = false;
                 }
             } catch (error) {
-                showToast(error.message, 'error');
-                btn.disabled = false;
+                alert('Connection error. Please try again.');
                 btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                btn.disabled = false;
             }
         }
-
-        // Clear conversation
-        async function clearConversation() {
-            if (!confirm('Start a new conversation? This will clear the current chat and preview.')) {
-                return;
-            }
-
+        
+        // File upload
+        function toggleUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.classList.toggle('hidden');
+        }
+        
+        function setupDropZone() {
+            const dropZone = document.querySelector('.drop-zone');
+            const fileInput = document.getElementById('fileInput');
+            
+            if (!dropZone) return;
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'));
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'));
+            });
+            
+            dropZone.addEventListener('drop', e => {
+                const files = e.dataTransfer.files;
+                if (files.length) handleFile(files[0]);
+            });
+            
+            fileInput.addEventListener('change', e => {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+            });
+        }
+        
+        async function handleFile(file) {
+            const status = document.getElementById('uploadStatus');
+            status.classList.remove('hidden');
+            status.innerHTML = '<span class="text-indigo-400">Uploading...</span>';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
             try {
-                const formData = new FormData();
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-
-                await fetch('/xbuilder/api/clear', {
+                const response = await fetch('/xbuilder/api/upload', {
                     method: 'POST',
                     body: formData
                 });
-
-                location.reload();
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    uploadedDocument = data.content;
+                    status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded</span>`;
+                    
+                    // Add message about the upload
+                    addMessageToUI('user', `📄 Uploaded: ${file.name}`);
+                    conversationHistory.push({ 
+                        role: 'user', 
+                        content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
+                    });
+                    
+                    // Hide upload area after success
+                    setTimeout(() => {
+                        document.getElementById('uploadArea').classList.add('hidden');
+                    }, 1500);
+                } else {
+                    status.innerHTML = `<span class="text-red-400">✗ ${data.error || 'Upload failed'}</span>`;
+                }
             } catch (error) {
-                showToast('Failed to clear conversation', 'error');
+                status.innerHTML = '<span class="text-red-400">✗ Upload failed</span>';
             }
         }
-
-        // Scroll to bottom on load
-        scrollToBottom();
+        
+        // New conversation
+        async function startNewConversation() {
+            if (!confirm('Start a new conversation? This will clear the current chat.')) return;
+            
+            try {
+                await fetch('/xbuilder/api/chat?action=clear', { method: 'POST' });
+                
+                // Clear UI
+                document.getElementById('messages').innerHTML = '';
+                document.getElementById('previewPlaceholder').classList.remove('hidden');
+                document.getElementById('previewFrame').classList.add('hidden');
+                document.getElementById('codePlaceholder').classList.remove('hidden');
+                document.getElementById('codeContent').classList.add('hidden');
+                document.getElementById('publishBtn').classList.add('hidden');
+                
+                // Reset state
+                conversationHistory = [];
+                generatedHtml = null;
+                uploadedDocument = null;
+                
+                // Show welcome message
+                addMessageToUI('assistant', getWelcomeMessage(), false);
+            } catch (error) {
+                console.error('Failed to start new conversation');
+            }
+        }
+        
+        // Keyboard handling
+        function handleKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // Auto-resize textarea
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+        }
     </script>
 </body>
 </html>

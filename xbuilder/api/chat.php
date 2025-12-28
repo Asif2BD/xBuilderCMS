@@ -1,106 +1,120 @@
 <?php
 /**
  * XBuilder Chat API
- *
- * Handles conversation with AI for website generation.
- *
- * Variables available from router:
- * - $GLOBALS['xbuilder_config']: Config instance
- * - $GLOBALS['xbuilder_security']: Security instance
+ * 
+ * Handles conversation with AI providers
  */
 
+header('Content-Type: application/json');
+
+require_once dirname(__DIR__) . '/core/Security.php';
+require_once dirname(__DIR__) . '/core/Config.php';
+require_once dirname(__DIR__) . '/core/AI.php';
+require_once dirname(__DIR__) . '/core/Conversation.php';
+require_once dirname(__DIR__) . '/core/Generator.php';
+
+use XBuilder\Core\Security;
+use XBuilder\Core\Config;
 use XBuilder\Core\AI;
 use XBuilder\Core\Conversation;
 use XBuilder\Core\Generator;
 
-header('Content-Type: application/json');
+$security = new Security();
+$config = new Config();
+$conversation = new Conversation();
 
-$config = $GLOBALS['xbuilder_config'];
-$security = $GLOBALS['xbuilder_security'];
-
-// Check authentication
-if (!$security->isAuthenticated()) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
+// Handle GET requests (load conversation)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $action = $_GET['action'] ?? 'load';
+    
+    if ($action === 'load') {
+        echo json_encode([
+            'success' => true,
+            'messages' => $conversation->getMessages(),
+            'generated_html' => $conversation->getGeneratedHtml(),
+            'context' => $conversation->getContext()
+        ]);
+        exit;
+    }
 }
 
-// Verify CSRF token
-$csrfToken = $_POST['csrf_token'] ?? '';
-if (!$security->verifyCsrfToken($csrfToken)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Invalid security token']);
-    exit;
-}
-
-// Get message
-$message = trim($_POST['message'] ?? '');
-
-if (empty($message)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Message is required']);
-    exit;
-}
-
-try {
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check for clear action
+    if (isset($_GET['action']) && $_GET['action'] === 'clear') {
+        $conversation->clear();
+        echo json_encode(['success' => true]);
+        exit;
+    }
+    
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input || !isset($input['message'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Message required']);
+        exit;
+    }
+    
+    $message = trim($input['message']);
+    $documentContent = $input['document'] ?? null;
+    
+    if (empty($message)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Message cannot be empty']);
+        exit;
+    }
+    
+    // Store user message
+    $conversation->addMessage('user', $message);
+    
+    // If document content provided, store it
+    if ($documentContent) {
+        $conversation->setDocumentContent($documentContent, 'uploaded_document');
+    }
+    
     // Get AI provider
     $provider = $config->getAiProvider();
     if (!$provider) {
-        throw new \RuntimeException('AI provider not configured');
+        echo json_encode(['success' => false, 'error' => 'AI provider not configured']);
+        exit;
     }
-
-    // Initialize conversation and AI
-    $conversation = new Conversation();
-    $ai = new AI($provider, $security);
-    $generator = new Generator();
-
-    // Add user message to conversation
-    $conversation->addMessage('user', $message);
-
-    // Get document content if any (for first message context)
-    $documentContent = $conversation->getDocumentContent();
-
-    // Get AI response
-    $messages = $conversation->getMessagesForAI();
-    $response = $ai->chat($messages, $documentContent);
-
-    if (!$response) {
-        throw new \RuntimeException('Failed to get AI response');
+    
+    // Initialize AI
+    $ai = new AI($provider);
+    
+    // Get conversation history for context
+    $history = $conversation->getMessagesForAI();
+    
+    // Send to AI
+    $result = $ai->chat($history, $documentContent);
+    
+    if (!$result['success']) {
+        echo json_encode([
+            'success' => false,
+            'error' => $result['error'] ?? 'AI request failed'
+        ]);
+        exit;
     }
-
-    // Add AI response to conversation
-    $conversation->addMessage('assistant', $response['content']);
-
-    // Check for generated HTML
-    $hasHtml = !empty($response['html']);
-
-    if ($hasHtml) {
-        // Validate HTML
-        $errors = $generator->validateHtml($response['html']);
-        if (!empty($errors)) {
-            // Log validation issues but continue
-            error_log('XBuilder HTML validation warnings: ' . implode(', ', $errors));
-        }
-
-        // Save to preview and conversation
-        $generator->savePreview($response['html']);
-        $conversation->setGeneratedHtml($response['html']);
-
-        // Mark site as generated in config
-        $config->setSiteGenerated(true);
+    
+    // Store AI response
+    $conversation->addMessage('assistant', $result['message']);
+    
+    // If HTML was generated, save it
+    if (!empty($result['html'])) {
+        $conversation->setGeneratedHtml($result['html']);
+        
+        // Save as preview
+        $generator = new Generator();
+        $generator->savePreview($result['html']);
     }
-
+    
     echo json_encode([
         'success' => true,
-        'content' => $response['content'],
-        'hasHtml' => $hasHtml,
-        'html' => $response['html'] ?? null
+        'message' => $result['message'],
+        'html' => $result['html'] ?? null
     ]);
-
-} catch (\Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'error' => $e->getMessage(),
-        'success' => false
-    ]);
+    exit;
 }
+
+http_response_code(405);
+echo json_encode(['error' => 'Method not allowed']);
