@@ -166,7 +166,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                         <p class="text-sm text-gray-400">
                             Drop your CV/document here or <span class="text-indigo-400">click to browse</span>
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, TXT supported</p>
+                        <p class="text-xs text-gray-500 mt-1">DOCX, TXT, PDF, DOC supported • <span class="text-indigo-400">DOCX recommended for CVs</span></p>
                     </label>
                 </div>
                 <div id="uploadStatus" class="hidden mt-2 text-sm"></div>
@@ -626,7 +626,6 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 if (data.success) {
                     uploadedDocument = data.content;
                     const wordCount = Math.round(data.length / 5); // Rough word count estimate
-                    status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
 
                     console.log('[XBuilder] Uploaded document:', {
                         filename: file.name,
@@ -634,24 +633,48 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                         preview: data.preview || data.content.substring(0, 200)
                     });
 
-                    // Add message about the upload
-                    addMessageToUI('user', `📄 Uploaded: ${file.name}`);
-                    conversationHistory.push({
-                        role: 'user',
-                        content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
-                    });
+                    // Check if content looks valid (not mostly garbage/binary)
+                    const isPDF = file.name.toLowerCase().endsWith('.pdf');
+                    const hasValidText = data.content && /[a-zA-Z]{3,}/.test(data.content);
+                    const suspiciousContent = data.length < 100 || !hasValidText;
 
-                    // Show hint that document will be sent with next message
-                    setTimeout(() => {
-                        status.innerHTML = `<span class="text-blue-400">📎 Document ready - will be sent with your next message</span>`;
-                    }, 1500);
+                    if (isPDF && suspiciousContent) {
+                        // PDF extraction might have failed
+                        status.innerHTML = `<span class="text-yellow-400">⚠️ ${file.name} uploaded, but text extraction may have failed (${wordCount} words). Try DOCX format for better results.</span>`;
+                        console.warn('[XBuilder] PDF extraction suspicious - content length:', data.length);
 
-                    // Hide upload area after 3 seconds
-                    setTimeout(() => {
-                        document.getElementById('uploadArea').classList.add('hidden');
-                    }, 3000);
+                        // Don't add to conversation if extraction clearly failed
+                        addMessageToUI('user', `📄 Uploaded: ${file.name} (extraction may have failed)`);
+                        addMessageToUI('assistant', `⚠️ I had trouble extracting text from that PDF. For best results, please upload your CV as a **.docx** or **.txt** file instead. Some PDFs are encrypted or use special formatting that makes extraction difficult.`);
+                        uploadedDocument = null; // Clear the bad content
+                    } else {
+                        // Successful extraction
+                        status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
+
+                        // Add message about the upload
+                        addMessageToUI('user', `📄 Uploaded: ${file.name}`);
+                        conversationHistory.push({
+                            role: 'user',
+                            content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
+                        });
+
+                        // Show hint that document will be sent with next message
+                        setTimeout(() => {
+                            status.innerHTML = `<span class="text-blue-400">📎 Document ready - will be sent with your next message</span>`;
+                        }, 1500);
+
+                        // Hide upload area after 3 seconds
+                        setTimeout(() => {
+                            document.getElementById('uploadArea').classList.add('hidden');
+                        }, 3000);
+                    }
                 } else {
                     status.innerHTML = `<span class="text-red-400">✗ ${data.error || 'Upload failed'}</span>`;
+
+                    // If it's a PDF error, suggest alternatives
+                    if (data.error && data.error.includes('PDF')) {
+                        addMessageToUI('assistant', `⚠️ ${data.error}\n\n**Tip**: For best results with CVs, use **.docx** or **.txt** format instead of PDF.`);
+                    }
                 }
             } catch (error) {
                 status.innerHTML = '<span class="text-red-400">✗ Upload failed</span>';
