@@ -464,21 +464,44 @@ PROMPT;
      */
     private function extractHtml(string $content): ?string
     {
-        // Look for ```xbuilder-html ... ``` blocks first
-        if (preg_match('/```xbuilder-html\s*([\s\S]*?)```/i', $content, $matches)) {
+        error_log("[XBuilder AI] Attempting to extract HTML from response (length: " . strlen($content) . ")");
+
+        // Look for ```xbuilder-html ... ``` blocks (most specific)
+        // Handle both with and without newline after marker
+        if (preg_match('/```xbuilder-html\s*\n?([\s\S]*?)```/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found xbuilder-html code block");
             return $this->cleanHtml(trim($matches[1]));
         }
 
         // Fallback: look for ```html ... ``` blocks
-        if (preg_match('/```html\s*([\s\S]*?)```/i', $content, $matches)) {
+        if (preg_match('/```html\s*\n?([\s\S]*?)```/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found html code block");
             return $this->cleanHtml(trim($matches[1]));
         }
 
-        // Fallback: look for <!DOCTYPE html> ... </html>
-        if (preg_match('/(<!DOCTYPE html>[\s\S]*<\/html>)/i', $content, $matches)) {
+        // Fallback: look for <!DOCTYPE html> ... </html> anywhere in content
+        // This catches cases where code block markers are malformed
+        if (preg_match('/(<!DOCTYPE html>[\s\S]*?<\/html>)/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found DOCTYPE html pattern (no code block)");
             return $this->cleanHtml(trim($matches[1]));
         }
 
+        // Last resort: look for incomplete HTML (starts with <!DOCTYPE but no closing)
+        // This handles truncated responses
+        if (preg_match('/(<!DOCTYPE html>[\s\S]+)/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found incomplete DOCTYPE html (response may be truncated)");
+            $html = trim($matches[1]);
+            // Add closing tags if missing
+            if (!str_contains($html, '</html>')) {
+                $html .= "\n</body>\n</html>";
+            }
+            if (!str_contains($html, '</body>')) {
+                $html = str_replace('</html>', "</body>\n</html>", $html);
+            }
+            return $this->cleanHtml($html);
+        }
+
+        error_log("[XBuilder AI] No HTML found in response");
         return null;
     }
 

@@ -459,27 +459,45 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
         
         // Format message with basic markdown
         function formatMessage(content) {
-            // Escape HTML
+            // Remove code blocks FIRST (before escaping HTML)
+            // This prevents the HTML code from being displayed in chat
+            // Matches: ```xbuilder-html, ```html, or any ``` code block
+            let hasCodeBlock = false;
+            content = content.replace(/```[\w-]*\s*\n?([\s\S]*?)```/g, function(match) {
+                hasCodeBlock = true;
+                return '[CODE_BLOCK_REMOVED]';
+            });
+
+            // Also remove any leftover HTML that looks like generated website code
+            // (in case code block markers are missing)
+            if (content.includes('<!DOCTYPE html>')) {
+                content = content.replace(/<!DOCTYPE html>[\s\S]*/i, '[CODE_BLOCK_REMOVED]');
+                hasCodeBlock = true;
+            }
+
+            // Escape HTML after removing code blocks
             let html = content
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
-            
+
+            // Replace code block placeholders with nice message
+            if (hasCodeBlock) {
+                html = html.replace(/\[CODE_BLOCK_REMOVED\]/g, '<div class="my-3 p-3 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-lg text-sm border border-indigo-600/30"><div class="flex items-center gap-2 text-indigo-300"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg><strong>Website generated!</strong></div><p class="mt-1 text-gray-300 text-xs">Check the <strong>Preview</strong> and <strong>Code</strong> tabs to see your website →</p></div>');
+            }
+
             // Bold
             html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
+
             // Italic
             html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            
-            // Code blocks (remove from display, we'll show in code tab)
-            html = html.replace(/```[\w-]*\n([\s\S]*?)```/g, '<div class="my-2 p-2 bg-dark-800 rounded text-sm text-indigo-300">✨ Website code generated! Check the Preview tab.</div>');
-            
+
             // Inline code
             html = html.replace(/`([^`]+)`/g, '<code class="bg-dark-800 px-1.5 py-0.5 rounded text-sm">$1</code>');
-            
+
             // Line breaks
             html = html.replace(/\n/g, '<br>');
-            
+
             return html;
         }
         
