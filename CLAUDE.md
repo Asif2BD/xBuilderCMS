@@ -2,6 +2,8 @@
 
 > This document captures the complete research, discussions, and decisions made during the creation of XBuilder. Use this to understand the project's vision, architecture, and future direction.
 
+**IMPORTANT: Read the [Versioning & Release Process](#versioning--release-process) section before making any code changes!**
+
 ---
 
 ## 🎯 Project Vision
@@ -439,5 +441,204 @@ curl -X POST http://localhost:8000/xbuilder/api/chat \
 
 ---
 
-*Last updated: December 2024*
+---
+
+## 📋 Versioning & Release Process
+
+**CRITICAL**: XBuilder follows **Semantic Versioning (SemVer)** and has an automated version management system.
+
+### Current Version System
+
+- **VERSION file**: Single source of truth (currently v0.3.0)
+- **Automatic UI display**: Version shown in setup, login, and chat interfaces
+- **Git tags**: Each version has a corresponding git tag (e.g., v0.3.0)
+- **CHANGELOG.md**: Detailed release notes for every version
+- **README.md**: Version badge and history sync with VERSION file
+
+### When Claude Makes Changes
+
+**IMPORTANT RULE**: If you make changes to 2+ files that add features or fix bugs, you MUST bump the version!
+
+#### Version Bump Rules:
+
+**PATCH (0.3.0 → 0.3.1) - Bug Fixes Only**
+```bash
+./bump-version.sh patch
+```
+Use when:
+- Fixing bugs
+- Security patches
+- Performance improvements
+- Documentation fixes (code-related)
+
+**MINOR (0.3.0 → 0.4.0) - New Features**
+```bash
+./bump-version.sh minor
+```
+Use when:
+- Adding new features
+- Adding new AI provider support
+- Adding new export formats
+- Multi-server support
+- UI improvements
+
+**MAJOR (0.9.0 → 1.0.0) - Breaking Changes**
+```bash
+./bump-version.sh major
+```
+Use when:
+- Breaking API changes
+- Database schema changes
+- Configuration format changes
+- First stable release (0.x → 1.0.0)
+
+### Automated Workflow
+
+The `bump-version.sh` script handles everything:
+
+1. **Updates VERSION file** (e.g., 0.3.0 → 0.4.0)
+2. **Updates README.md** (badges and version references)
+3. **Prompts for CHANGELOG.md update** (you must add release notes)
+4. **Creates git commit** with message "chore: bump version to X.X.X"
+5. **Creates git tag** (e.g., v0.4.0)
+6. **Pushes to remote** (branch + tag)
+
+### How to Use (Step-by-Step)
+
+**After making changes:**
+
+```bash
+# 1. Determine version bump type
+# If you added features → minor
+# If you fixed bugs → patch
+# If breaking changes → major
+
+# 2. Run the script
+./bump-version.sh minor
+
+# 3. Confirm the version bump
+# Current version: 0.3.0
+# New version: 0.4.0
+# Bump version from 0.3.0 to 0.4.0? (y/n) → y
+
+# 4. Update CHANGELOG.md when prompted
+# Add your changes under:
+## [0.4.0] - 2025-12-30
+
+### Added
+- Feature description here
+
+### Fixed
+- Bug fix description here
+
+# Press Enter when done
+
+# 5. Confirm commit
+# Commit version bump? (y/n) → y
+
+# 6. Create tag
+# Create git tag v0.4.0? (y/n) → y
+
+# 7. Push to remote
+# Push to remote (branch + tag)? (y/n) → y
+```
+
+### Manual Version Bump (If Script Unavailable)
+
+If the script doesn't work, manually update:
+
+1. **VERSION file**: `echo "0.4.0" > VERSION`
+2. **README.md**: Update badge `version-0.4.0-blue` and "Current Version: 0.4.0"
+3. **CHANGELOG.md**: Add new section `## [0.4.0] - 2025-12-30`
+4. **xbuilder/core/Config.php**: Update fallback to `return '0.4.0';`
+5. **Commit**: `git commit -m "chore: bump version to 0.4.0"`
+6. **Tag**: `git tag -a v0.4.0 -m "Release version 0.4.0"`
+7. **Push**: `git push origin main && git push origin v0.4.0`
+
+### What NOT to Bump For
+
+Don't bump version for:
+- ❌ README-only updates
+- ❌ CLAUDE.md updates
+- ❌ Comment changes
+- ❌ Code formatting (no logic change)
+- ❌ .gitignore changes
+- ❌ CI/CD config only
+
+### Examples from Recent Work
+
+**v0.3.0** (MINOR bump)
+- Added version display in UI
+- Added bump-version.sh script
+- Added complete version history
+= New features → MINOR bump ✅
+
+**v0.2.0** (MINOR bump)
+- Multi-server support (Nginx, OpenLiteSpeed)
+- Deployment guides
+- Fixed 403 error
+= New features + bug fix → MINOR bump (higher category wins) ✅
+
+**v0.1.4** (PATCH bump)
+- Fixed Gemini API compatibility
+= Bug fix only → PATCH bump ✅
+
+### Version Display in UI
+
+All admin pages read VERSION file and display:
+```php
+<?php
+$versionFile = dirname(__DIR__, 2) . '/VERSION';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.3.0';
+?>
+<!-- In footer -->
+<div>XBuilder v<?php echo htmlspecialchars($version); ?></div>
+```
+
+Users see current version in:
+- Setup wizard (bottom-right corner)
+- Login page (bottom-right corner)
+- Chat interface (bottom-left corner)
+
+### GitHub Actions
+
+On push to main with VERSION file change:
+- Automatically creates git tag
+- Creates GitHub Release
+- Links to CHANGELOG.md
+
+### Quick Reference
+
+```bash
+# Check current version
+cat VERSION
+
+# Bump version (interactive)
+./bump-version.sh [patch|minor|major]
+
+# View version history
+cat CHANGELOG.md | head -50
+
+# See version in README
+grep "Current Version" README.md
+```
+
+### For Future Claude Sessions
+
+**Before committing any code changes:**
+
+1. ✅ Check if you modified 2+ files
+2. ✅ Determine if changes are features (MINOR) or fixes (PATCH)
+3. ✅ Run `./bump-version.sh [type]`
+4. ✅ Update CHANGELOG.md with your changes
+5. ✅ Confirm all prompts
+6. ✅ Version is automatically bumped, tagged, and pushed!
+
+**Never forget**: If you add features or fix bugs, the version MUST be bumped. It's not optional!
+
+See [VERSIONING.md](VERSIONING.md) for complete documentation.
+
+---
+
+*Last updated: December 2025*
 *Generated from Claude.ai conversation with Asif Rahman*
