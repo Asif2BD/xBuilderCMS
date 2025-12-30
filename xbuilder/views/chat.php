@@ -220,7 +220,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 <span id="updateBtnText">Update Available</span>
             </button>
 
-            <button onclick="copyDebugInfo()"
+            <button onclick="copyDebugInfo(event)"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
                     title="Copy debug info to clipboard">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -971,7 +971,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         }
 
         // Copy debug information to clipboard
-        async function copyDebugInfo() {
+        async function copyDebugInfo(event) {
             const debugInfo = {
                 timestamp: new Date().toISOString(),
                 version: '<?php echo $version; ?>',

@@ -152,7 +152,7 @@ class Config
             }
         }
 
-        return '0.6.1'; // Fallback version
+        return '0.6.2'; // Fallback version
     }
 
     /**
