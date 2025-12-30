@@ -319,7 +319,14 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
             // Show typing indicator
             showTypingIndicator();
             isLoading = true;
-            
+
+            // Log if sending document
+            if (uploadedDocument) {
+                console.log('[XBuilder] Sending message WITH document:', uploadedDocument.length, 'chars');
+            } else {
+                console.log('[XBuilder] Sending message WITHOUT document');
+            }
+
             try {
                 const response = await fetch('/xbuilder/api/chat', {
                     method: 'POST',
@@ -556,19 +563,31 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 
                 if (data.success) {
                     uploadedDocument = data.content;
-                    status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded</span>`;
-                    
+                    const wordCount = Math.round(data.length / 5); // Rough word count estimate
+                    status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
+
+                    console.log('[XBuilder] Uploaded document:', {
+                        filename: file.name,
+                        length: data.length,
+                        preview: data.preview || data.content.substring(0, 200)
+                    });
+
                     // Add message about the upload
                     addMessageToUI('user', `📄 Uploaded: ${file.name}`);
-                    conversationHistory.push({ 
-                        role: 'user', 
+                    conversationHistory.push({
+                        role: 'user',
                         content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
                     });
-                    
-                    // Hide upload area after success
+
+                    // Show hint that document will be sent with next message
+                    setTimeout(() => {
+                        status.innerHTML = `<span class="text-blue-400">📎 Document ready - will be sent with your next message</span>`;
+                    }, 1500);
+
+                    // Hide upload area after 3 seconds
                     setTimeout(() => {
                         document.getElementById('uploadArea').classList.add('hidden');
-                    }, 1500);
+                    }, 3000);
                 } else {
                     status.innerHTML = `<span class="text-red-400">✗ ${data.error || 'Upload failed'}</span>`;
                 }
