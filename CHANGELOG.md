@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2025-12-30
+
+### Fixed
+- **Critical: Gemini API model name error**: Corrected invalid model name causing quota errors
+  - Changed from `gemini-2.5-flash` (doesn't exist) to `gemini-2.0-flash-exp` (correct)
+  - Resolves error: "Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests"
+  - Note: `gemini-2.5-flash` was never a valid model - v0.3.2 introduced this error
+  - Gemini 2.0 Flash Experimental is the current recommended model
+  - Updated all documentation to reflect correct model names
+
 ## [0.6.2] - 2025-12-30
 
 ### Improved
@@ -374,7 +384,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **0.4.1** - Critical bug fix (PDF extraction returning corrupted data)
 - **0.4.0** - New feature (LinkedIn profile fetching, deployment UX improvements)
 - **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
-- **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
+- **0.3.2** - Bug fix attempt (used incorrect model gemini-2.5-flash - fixed in v0.6.3)
 - **0.3.1** - Incomplete fix (used deprecated Gemini 1.5 model)
 - **0.3.0** - Platform enhancements (version display, automation)
 - **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)

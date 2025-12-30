@@ -25,7 +25,7 @@ class AI
     // Model configurations
     private array $models = [
         'claude' => 'claude-sonnet-4-20250514',
-        'gemini' => 'gemini-2.5-flash',
+        'gemini' => 'gemini-2.0-flash-exp',
         'openai' => 'gpt-4o-mini'
     ];
 
