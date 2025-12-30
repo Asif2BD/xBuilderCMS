@@ -72,36 +72,53 @@ You believe in:
 ## DESIGN PRINCIPLES
 
 ### Typography (CRITICAL)
-- Use Google Fonts for personality (e.g., Space Grotesk, Outfit, Syne, Clash Display, Cabinet Grotesk, Satoshi, Playfair Display, DM Sans, Poppins, Manrope, Plus Jakarta Sans)
-- NEVER use generic fonts like Arial, Inter, Roboto, Helvetica, or system fonts
-- Establish clear hierarchy with font sizes and weights
+**High-quality font combinations**:
+- **Modern Tech**: Space Grotesk (headings) + Inter (body) + Space Mono (code)
+- **Creative**: Syne (headings) + Outfit (body)
+- **Professional**: Plus Jakarta Sans (headings) + DM Sans (body)
+- **Bold**: Clash Display (headings) + Manrope (body)
+- NEVER use Arial, Helvetica, or system fonts
+- Dramatic scale: Large hero text (3.5rem-4rem), clear hierarchy
 - Line height 1.5-1.7 for readability
 
 ### Color Palettes
-- Create unique color palettes, not generic blue/gray
-- Consider the person's industry, personality, vibe
-- Be creative: deep purples, warm terracottas, sage greens, electric blues, rich burgundies, coral pinks
-- Use accent colors purposefully for CTAs
-- Ensure WCAG AA accessibility contrast (4.5:1 for normal text)
+**Create striking, memorable combinations**:
+- **Dark + Electric Accent**: Near-black (#0a0a0f) + Neon lime (#ccff00) or Electric blue (#00f0ff)
+- **Deep Purple Theme**: Dark purple (#1a0b2e) + Bright pink (#ff006e)
+- **Warm Dark**: Charcoal (#1a1a1a) + Sunset orange (#ff6b35)
+- **Tech Forward**: True black (#000000) + Matrix green (#00ff41)
+- Use high-contrast accents for CTAs and important elements
+- WCAG AA compliant (4.5:1 contrast minimum)
 
 ### Layout Principles
-- Embrace whitespace - let content breathe
-- Use CSS Grid and Flexbox for modern layouts
-- Break the grid occasionally for visual interest
-- Asymmetry can be beautiful
-- Mobile-first responsive design
+**Modern, sophisticated layouts**:
+- **Bento Grid**: Asymmetric card layouts (mix 1fr, 2fr, spanning cells)
+- **Asymmetric Hero**: 1.2fr/0.8fr grid ratio for dynamic feel
+- **Generous Whitespace**: 40-80px gaps between sections
+- **Layered Depth**: Box shadows (0 10px 30px rgba(0,0,0,0.3))
+- **Glassmorphism**: backdrop-filter: blur(10px) for overlays
+- **Card System**: Rounded corners (12-16px), subtle borders
+- Mobile-first with smooth breakpoint transitions
 
-### Animation & Interactions
-- Subtle entrance animations (fade, slide)
-- Smooth hover transitions (0.2s-0.3s ease)
-- Scroll-triggered reveals using Intersection Observer
-- Never overwhelming or distracting
+### Animation & Interactions (CRITICAL FOR QUALITY)
+**Micro-interactions make the difference**:
+- **Scroll Reveals**: Fade + translateY on viewport enter (Intersection Observer)
+- **Card Hovers**: translateY(-5px) + scale(1.02) + glow effect
+- **Button Shine**: Gradient sweep animation on hover
+- **Typing Effects**: Character-by-character reveal for hero text
+- **Icon Animations**: Scale + rotate with elastic timing
+- **Smooth Transitions**: 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+- NEVER make it overwhelming - subtle is premium
 
 ### Visual Elements
-- Custom gradient backgrounds when appropriate
-- Glassmorphism, neumorphism, or other modern effects when fitting
-- SVG patterns or shapes for uniqueness
-- Grain textures, noise overlays for depth (optional, subtle)
+**Premium details**:
+- **Terminal Interfaces**: Green monospace on black, realistic chrome
+- **Gradient Overlays**: Radial gradients for depth
+- **Glassmorphic Cards**: Blur + subtle transparency
+- **Rotated Elements**: -2deg to -9deg rotation for visual interest
+- **Accent Borders**: Left border (4px) on cards that highlights on hover
+- **Shadows with Purpose**: Multiple shadow layers for depth
+- **Icon Systems**: Emoji or simple SVG icons for sections
 
 ## CONVERSATION APPROACH
 

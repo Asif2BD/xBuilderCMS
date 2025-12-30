@@ -6,14 +6,20 @@
  * - API key encryption/decryption (AES-256-CBC)
  * - Password hashing (Argon2id)
  * - CSRF protection with expiry
- * - Session management with namespacing
+ * - Session management with IP/User-Agent validation
+ * - Account lockout after failed login attempts
+ * - Security audit logging
  *
- * Combined best practices from both implementations:
+ * Security features:
  * - Instance-based for better DI/testing
  * - Secure key deletion (overwrite before unlink)
  * - Storage directory protection (.htaccess)
  * - Session namespacing (xbuilder_*)
  * - CSRF token expiry
+ * - Account lockout: 5 attempts, 15 min lockout
+ * - Session hijacking prevention (IP + User-Agent validation)
+ * - Security event logging to audit trail
+ * - Reduced session lifetime (2 hours)
  */
 
 namespace XBuilder\Core;
@@ -26,8 +32,10 @@ class Security
 
     private const CIPHER = 'AES-256-CBC';
     private const SESSION_PREFIX = 'xbuilder_';
-    private const SESSION_LIFETIME = 86400; // 24 hours
+    private const SESSION_LIFETIME = 7200; // 2 hours (improved from 24 hours)
     private const CSRF_LIFETIME = 3600; // 1 hour
+    private const MAX_LOGIN_ATTEMPTS = 5; // Lock account after 5 failed attempts
+    private const LOCKOUT_DURATION = 900; // 15 minutes lockout
 
     public function __construct()
     {
@@ -155,6 +163,7 @@ class Security
         $result = file_put_contents($file, $encrypted, LOCK_EX);
         if ($result !== false) {
             chmod($file, 0600);
+            $this->logSecurityEvent('api_key_stored', ['provider' => $provider]);
             return true;
         }
 
@@ -195,7 +204,11 @@ class Security
             // Overwrite with random bytes before deleting (secure deletion)
             $size = filesize($file);
             file_put_contents($file, random_bytes($size));
-            return unlink($file);
+            $result = unlink($file);
+            if ($result) {
+                $this->logSecurityEvent('api_key_deleted', ['provider' => $provider]);
+            }
+            return $result;
         }
 
         return true;
@@ -258,6 +271,26 @@ class Security
 
         // Check session expiry
         if ((time() - $_SESSION[$timeKey]) > self::SESSION_LIFETIME) {
+            $this->logSecurityEvent('session_expired');
+            $this->logout();
+            return false;
+        }
+
+        // Validate IP hasn't changed (prevents session hijacking)
+        if (($_SESSION[self::SESSION_PREFIX . 'ip'] ?? '') !== ($_SERVER['REMOTE_ADDR'] ?? '')) {
+            $this->logSecurityEvent('session_hijack_attempt', [
+                'original_ip' => $_SESSION[self::SESSION_PREFIX . 'ip'] ?? 'unknown',
+                'current_ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+            $this->logout();
+            return false;
+        }
+
+        // Validate User-Agent hasn't changed (prevents session hijacking)
+        if (($_SESSION[self::SESSION_PREFIX . 'user_agent'] ?? '') !== ($_SERVER['HTTP_USER_AGENT'] ?? '')) {
+            $this->logSecurityEvent('session_hijack_attempt', [
+                'reason' => 'user_agent_mismatch'
+            ]);
             $this->logout();
             return false;
         }
@@ -274,9 +307,14 @@ class Security
 
         $_SESSION[self::SESSION_PREFIX . 'authenticated'] = $authenticated;
         $_SESSION[self::SESSION_PREFIX . 'auth_time'] = time();
+        $_SESSION[self::SESSION_PREFIX . 'ip'] = $_SERVER['REMOTE_ADDR'] ?? '';
+        $_SESSION[self::SESSION_PREFIX . 'user_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
         // Regenerate session ID for security
         session_regenerate_id(true);
+
+        // Log successful authentication
+        $this->logSecurityEvent('login_success');
     }
 
     /**
@@ -284,14 +322,117 @@ class Security
      */
     public function authenticate(string $password, string $hash): bool
     {
+        $identifier = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+        // Check if account is locked out
+        if (!$this->checkLoginAttempts($identifier)) {
+            $this->logSecurityEvent('login_blocked', ['reason' => 'account_locked']);
+            usleep(500000); // Still delay to prevent timing attacks
+            return false;
+        }
+
         if (!$this->verifyPassword($password, $hash)) {
+            // Record failed attempt
+            $this->recordFailedAttempt($identifier);
+            $this->logSecurityEvent('login_failed', [
+                'attempts' => $this->getFailedAttempts($identifier)
+            ]);
+
             // Rate limiting: delay on failed attempt
             usleep(500000); // 0.5 second delay
             return false;
         }
 
+        // Clear failed attempts on successful login
+        $this->clearLoginAttempts($identifier);
         $this->setAuthenticated(true);
         return true;
+    }
+
+    /**
+     * Check if login attempts are within limit
+     */
+    public function checkLoginAttempts(string $identifier): bool
+    {
+        $this->ensureSession();
+        $key = self::SESSION_PREFIX . 'login_attempts_' . hash('sha256', $identifier);
+        $attempts = $_SESSION[$key] ?? ['count' => 0, 'time' => time()];
+
+        // Reset if lockout expired
+        if (time() - $attempts['time'] > self::LOCKOUT_DURATION) {
+            unset($_SESSION[$key]);
+            return true;
+        }
+
+        // Check if locked out
+        if ($attempts['count'] >= self::MAX_LOGIN_ATTEMPTS) {
+            return false; // Locked out
+        }
+
+        return true; // Not locked
+    }
+
+    /**
+     * Record a failed login attempt
+     */
+    public function recordFailedAttempt(string $identifier): void
+    {
+        $this->ensureSession();
+        $key = self::SESSION_PREFIX . 'login_attempts_' . hash('sha256', $identifier);
+        $attempts = $_SESSION[$key] ?? ['count' => 0, 'time' => time()];
+
+        $attempts['count']++;
+        $attempts['time'] = time();
+
+        $_SESSION[$key] = $attempts;
+    }
+
+    /**
+     * Get number of failed attempts
+     */
+    public function getFailedAttempts(string $identifier): int
+    {
+        $this->ensureSession();
+        $key = self::SESSION_PREFIX . 'login_attempts_' . hash('sha256', $identifier);
+        $attempts = $_SESSION[$key] ?? ['count' => 0, 'time' => time()];
+        return $attempts['count'];
+    }
+
+    /**
+     * Clear login attempts
+     */
+    public function clearLoginAttempts(string $identifier): void
+    {
+        $this->ensureSession();
+        $key = self::SESSION_PREFIX . 'login_attempts_' . hash('sha256', $identifier);
+        unset($_SESSION[$key]);
+    }
+
+    /**
+     * Log security event to audit log
+     */
+    public function logSecurityEvent(string $event, array $data = []): void
+    {
+        $logFile = $this->storagePath . '/security.log';
+
+        $entry = [
+            'timestamp' => date('c'),
+            'event' => $event,
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            'data' => $data
+        ];
+
+        file_put_contents(
+            $logFile,
+            json_encode($entry) . "\n",
+            FILE_APPEND | LOCK_EX
+        );
+
+        // Set restrictive permissions on log file
+        if (file_exists($logFile)) {
+            chmod($logFile, 0600);
+        }
     }
 
     /**
@@ -300,6 +441,9 @@ class Security
     public function logout(): void
     {
         $this->ensureSession();
+
+        // Log logout event
+        $this->logSecurityEvent('logout');
 
         // Clear all xbuilder session keys
         foreach ($_SESSION as $key => $value) {
