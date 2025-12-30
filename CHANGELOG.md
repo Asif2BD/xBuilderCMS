@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-12-30
+
+### Added
+- **In-built update system**: One-click updates from GitHub
+  - Automatic update checking from GitHub releases
+  - Update notification badge in chat interface (animates when available)
+  - Beautiful update modal showing version comparison and changelog
+  - One-click update with progress indicator
+  - Automatic backup before update (stored in `/xbuilder/storage/backups/`)
+  - Automatic rollback if update fails
+  - Preserves user data (`site/`, `storage/`, API keys, configuration)
+  - Update verification (ensures version matches after update)
+  - Clean old backups (keeps last 5)
+  - Safe update process (30-60 seconds)
+  - No manual Git operations required
+  - Works from within the admin interface
+
+- **Update API endpoint**: `/xbuilder/api/update.php`
+  - `check`: Check for updates from GitHub
+  - `perform`: Download and apply update
+  - `list_backups`: List available backups
+  - `rollback`: Rollback to specific backup
+
+- **Update core class**: `xbuilder/core/Update.php`
+  - GitHub API integration
+  - ZIP download and extraction
+  - Backup creation and restoration
+  - Safe file replacement (excludes user data)
+  - Version verification
+
+### Changed
+- Updated `.gitignore` to exclude backups and security logs
+- Chat interface checks for updates 2 seconds after page load
+
+### Benefits
+- Users can update XBuilder without SSH/Git access
+- No downtime - updates complete in under 60 seconds
+- Zero risk - automatic backup and rollback
+- User websites and data are never touched
+- Perfect for non-technical users on shared hosting
+
 ## [0.6.0] - 2025-12-30
 
 ### Added

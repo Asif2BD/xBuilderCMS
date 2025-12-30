@@ -211,6 +211,15 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 View Public Website
             </a>
 
+            <!-- Update Available Button (shows when update is available) -->
+            <button onclick="showUpdateModal()" id="updateBtn"
+                    class="hidden px-4 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition flex items-center gap-2 font-medium animate-pulse">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <span id="updateBtnText">Update Available</span>
+            </button>
+
             <button onclick="copyDebugInfo()"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
                     title="Copy debug info to clipboard">
@@ -1129,5 +1138,219 @@ Please paste this information when reporting issues to help with debugging.
          class="text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600">
         XBuilder v<?php echo htmlspecialchars($version); ?>
     </div>
+
+    <!-- Update Modal -->
+    <div id="updateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+        <div class="bg-dark-800 rounded-xl shadow-2xl border border-dark-600 max-w-2xl w-full mx-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <h2 class="text-xl font-semibold text-white">System Update</h2>
+                </div>
+                <button onclick="closeUpdateModal()" class="text-gray-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 max-h-96 overflow-y-auto">
+                <div id="updateContent">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-dark-600 flex items-center justify-end gap-3">
+                <button onclick="closeUpdateModal()" class="px-4 py-2 text-sm bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition">
+                    Cancel
+                </button>
+                <button onclick="performUpdate()" id="updateNowBtn" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium">
+                    Update Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update management
+        let currentUpdateInfo = null;
+
+        // Check for updates on page load
+        async function checkForUpdates() {
+            try {
+                const response = await fetch('/xbuilder/api/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'check' })
+                });
+
+                const data = await response.json();
+
+                if (data.available) {
+                    currentUpdateInfo = data;
+                    const updateBtn = document.getElementById('updateBtn');
+                    const updateBtnText = document.getElementById('updateBtnText');
+
+                    if (updateBtn && updateBtnText) {
+                        updateBtn.classList.remove('hidden');
+                        updateBtnText.textContent = `Update to v${data.latest_version}`;
+                    }
+
+                    console.log('[XBuilder Update] New version available:', data.latest_version);
+                }
+            } catch (error) {
+                console.error('[XBuilder Update] Failed to check for updates:', error);
+            }
+        }
+
+        // Show update modal
+        function showUpdateModal() {
+            if (!currentUpdateInfo) return;
+
+            const modal = document.getElementById('updateModal');
+            const content = document.getElementById('updateContent');
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-400">Current Version</p>
+                            <p class="text-xl font-semibold text-white">v${currentUpdateInfo.current_version}</p>
+                        </div>
+                        <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm text-gray-400">New Version</p>
+                            <p class="text-xl font-semibold text-emerald-500">v${currentUpdateInfo.latest_version}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-900 rounded-lg p-4 border border-dark-600">
+                        <h3 class="font-semibold text-white mb-2">What's New</h3>
+                        <div class="text-sm text-gray-300 prose prose-invert max-w-none" style="white-space: pre-wrap;">${escapeHtml(currentUpdateInfo.changelog || 'No changelog available.')}</div>
+                    </div>
+
+                    <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                        <div class="flex gap-3">
+                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-blue-300">
+                                <p class="font-semibold mb-1">Safety Features:</p>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Automatic backup before update</li>
+                                    <li>Your website and data are preserved</li>
+                                    <li>Rollback available if needed</li>
+                                    <li>Process takes 30-60 seconds</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        // Close update modal
+        function closeUpdateModal() {
+            const modal = document.getElementById('updateModal');
+            modal.classList.add('hidden');
+        }
+
+        // Perform update
+        async function performUpdate() {
+            const updateNowBtn = document.getElementById('updateNowBtn');
+            const content = document.getElementById('updateContent');
+
+            // Disable button and show progress
+            updateNowBtn.disabled = true;
+            updateNowBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto mb-4" style="width: 40px; height: 40px; border-width: 3px;"></div>
+                    <p class="text-lg font-semibold text-white mb-2">Updating XBuilder...</p>
+                    <p class="text-sm text-gray-400">Please wait, this may take up to 60 seconds</p>
+                    <div class="mt-4 space-y-2 text-sm text-gray-500">
+                        <p>✓ Creating backup...</p>
+                        <p>✓ Downloading update...</p>
+                        <p>⏳ Installing files...</p>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/xbuilder/api/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'perform' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Update Successful!</h3>
+                            <p class="text-gray-400 mb-4">XBuilder has been updated to version ${data.new_version}</p>
+                            <div class="bg-dark-900 rounded-lg p-4 border border-dark-600 text-sm text-left">
+                                <p class="text-gray-400"><span class="text-white font-semibold">Old Version:</span> v${data.old_version}</p>
+                                <p class="text-gray-400"><span class="text-white font-semibold">New Version:</span> v${data.new_version}</p>
+                                <p class="text-gray-400 mt-2"><span class="text-white font-semibold">Backup:</span> ${data.backup_file}</p>
+                            </div>
+                            <button onclick="window.location.reload()" class="mt-6 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium">
+                                Reload Page
+                            </button>
+                        </div>
+                    `;
+                    updateNowBtn.style.display = 'none';
+                } else {
+                    throw new Error(data.error || 'Update failed');
+                }
+
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Update Failed</h3>
+                        <p class="text-gray-400 mb-4">${escapeHtml(error.message)}</p>
+                        <p class="text-sm text-gray-500">Your system has been rolled back to the previous version.</p>
+                        <button onclick="closeUpdateModal(); location.reload();" class="mt-6 px-6 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition">
+                            Close
+                        </button>
+                    </div>
+                `;
+                updateNowBtn.style.display = 'none';
+            }
+        }
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Check for updates on page load
+        setTimeout(() => {
+            checkForUpdates();
+        }, 2000); // Wait 2 seconds after page load
+    </script>
 </body>
 </html>
