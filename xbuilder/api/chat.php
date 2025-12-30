@@ -85,9 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => false, 'error' => 'AI provider not configured']);
         exit;
     }
-    
-    // Initialize AI
-    $ai = new AI($provider);
+
+    // Get custom model if set
+    $customModel = $config->get('ai_model');
+
+    // Initialize AI with optional custom model
+    $ai = new AI($provider, null, $customModel);
     
     // Get conversation history for context
     $history = $conversation->getMessagesForAI();

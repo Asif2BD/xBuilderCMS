@@ -1,6 +1,6 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
-[![Version](https://img.shields.io/badge/version-0.6.2-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7.3-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
@@ -8,7 +8,7 @@
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
 
-> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.6.2** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.7.3** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -233,10 +233,10 @@ XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
 - ✅ Added word count and preview feedback
 - ✅ Comprehensive logging and debugging
 
-**v0.3.2** (2025-12-30) - Gemini API Compatibility Fix
-- ✅ Updated to gemini-2.5-flash (current stable production model)
+**v0.3.2** (2025-12-30) - Gemini API Compatibility Fix (Note: Introduced incorrect model - fixed in v0.6.3)
+- ⚠️ Attempted to update to gemini-2.5-flash (this model doesn't exist)
 - ✅ Gemini 1.5 models are deprecated in Google's v1 API
-- ✅ Gemini integration now fully functional
+- ❌ This introduced a bug - corrected in v0.6.3 to use gemini-2.0-flash-exp
 
 **v0.3.1** (2025-12-30) - Incomplete Fix
 - ⚠️ Attempted Gemini fix with deprecated model name

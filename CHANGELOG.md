@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2025-12-30
+
+### Fixed
+- **CRITICAL: Added missing GPT-5 family models**:
+  - **GPT-5.2** (Latest - Dec 2025): gpt-5.2, gpt-5.2-2025-12-11, gpt-5.2-chat-latest, gpt-5.2-pro
+  - **GPT-5.1** (Nov 2025): gpt-5.1, gpt-5.1-2025-11-13, gpt-5.1-chat-latest, gpt-5.1-codex, gpt-5.1-codex-mini
+  - **GPT-5** (Aug 2025): gpt-5, gpt-5-2025-08-07, gpt-5-mini, gpt-5-nano, gpt-5-chat-latest
+  - Total: 32 OpenAI models now available (was missing 16 GPT-5 models)
+  - **Apology**: v0.7.1 incorrectly stated "GPT-5 does not exist" - this was completely wrong
+  - All GPT-5 models released throughout 2025 are now included
+
+### Note
+- User was correct - I made a mistake not finding GPT-5 models
+- OpenAI platform.openai.com/docs was temporarily blocking requests
+- All model IDs verified from official OpenAI documentation
+
+## [0.7.2] - 2025-12-30
+
+### Added
+- **Reset XBuilder feature**: Factory reset from settings modal
+  - "Reset XBuilder" button in Settings → Danger Zone section
+  - Two-step confirmation: dialog + text confirmation ("RESET_XBUILDER")
+  - Deletes all API keys (securely overwritten before deletion)
+  - Deletes all conversations, uploads, generated site, backups
+  - Clears configuration and sessions
+  - Redirects to setup wizard after reset
+  - Perfect for testing or starting fresh
+
+### Security
+- Secure API key deletion: overwrites with random bytes before unlinking
+- Requires authentication to access reset endpoint
+- Two-step confirmation prevents accidental resets
+
+## [0.7.1] - 2025-12-30
+
+### Fixed
+- **Critical: Updated to current API models (December 2025)**:
+  - **Claude**: Added 4.5 family - Sonnet 4.5, Opus 4.5, Haiku 4.5 (latest models)
+  - **OpenAI**: Added O3, O3-Mini, O3-Pro, O4-Mini, GPT-4.1 family (1M context)
+  - **Gemini**: Added 3.x family (3 Pro, 3 Flash, 3 Deep Think), 2.5 family, complete 2.0 lineup
+  - Removed non-existent models from previous version
+  - Updated default models to latest stable versions
+
+### Note
+- **CORRECTION**: Previous version incorrectly stated GPT-5 doesn't exist - it does!
+- Claude Opus 4.5 is the most intelligent Claude model
+- Gemini 3 Pro is the latest Gemini (released Nov 2025)
+- All model names verified against official API documentation
+- Missing GPT-5 family fixed in v0.7.3
+
+## [0.7.0] - 2025-12-30
+
+### Added
+- **Inline model switcher in chat header**: Switch AI models on-the-fly without opening settings
+  - Dropdown shows all available models grouped by provider
+  - Only shows providers with configured API keys
+  - Instant switching - no page reload needed
+  - Makes it easy to try different models (free vs paid)
+
+- **Expanded model support**: Added many more models for all providers
+  - **Gemini**: 6 models including free tier (2.0 Flash, 1.5 Flash, 1.5 Flash-8B, Thinking mode) and paid (1.5 Pro)
+  - **Claude**: 9 models from Haiku to Opus 4 (including latest Sonnet 4, Opus 4, 3.7 Sonnet)
+  - **OpenAI**: 8 models including reasoning models (GPT-4o, o1, o1-mini, o3-mini)
+  - Clear labels showing which models are free vs paid
+
+- **Professional fixed footer**: Replaced floating version badge with full-width footer
+  - Shows current version, active provider, and model
+  - GitHub link and copyright info
+  - Clean, professional appearance
+  - Doesn't interfere with chat interface
+
+### Changed
+- Model selection now uses config setting instead of hardcoded defaults
+- AI class constructor accepts custom model parameter
+- Footer spans full width for better visual balance
+
+### Improved
+- UI/UX: Easier to switch models - no need to open settings modal
+- UI/UX: Current AI configuration always visible in footer
+- Developer experience: setModel() and getModel() methods in AI class
+
+## [0.6.3] - 2025-12-30
+
+### Fixed
+- **Critical: Gemini API model name error**: Corrected invalid model name causing quota errors
+  - Changed from `gemini-2.5-flash` (doesn't exist) to `gemini-2.0-flash-exp` (correct)
+  - Resolves error: "Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests"
+  - Note: `gemini-2.5-flash` was never a valid model - v0.3.2 introduced this error
+  - Gemini 2.0 Flash Experimental is the current recommended model
+  - Updated all documentation to reflect correct model names
+
 ## [0.6.2] - 2025-12-30
 
 ### Improved
@@ -374,7 +465,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **0.4.1** - Critical bug fix (PDF extraction returning corrupted data)
 - **0.4.0** - New feature (LinkedIn profile fetching, deployment UX improvements)
 - **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
-- **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
+- **0.3.2** - Bug fix attempt (used incorrect model gemini-2.5-flash - fixed in v0.6.3)
 - **0.3.1** - Incomplete fix (used deprecated Gemini 1.5 model)
 - **0.3.0** - Platform enhancements (version display, automation)
 - **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)

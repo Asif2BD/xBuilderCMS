@@ -44,8 +44,17 @@ switch ($action) {
                 'name' => 'Google Gemini',
                 'has_key' => $security->hasApiKey('gemini'),
                 'models' => [
-                    'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental)',
-                    'gemini-1.5-flash' => 'Gemini 1.5 Flash',
+                    'gemini-3-pro' => 'Gemini 3 Pro (Latest - Nov 2025)',
+                    'gemini-3-flash' => 'Gemini 3 Flash (Latest)',
+                    'gemini-3-deep-think' => 'Gemini 3 Deep Think',
+                    'gemini-2.5-pro' => 'Gemini 2.5 Pro',
+                    'gemini-2.5-flash' => 'Gemini 2.5 Flash',
+                    'gemini-2.5-flash-lite' => 'Gemini 2.5 Flash-Lite (Speed)',
+                    'gemini-2.0-flash' => 'Gemini 2.0 Flash (Free)',
+                    'gemini-2.0-flash-lite' => 'Gemini 2.0 Flash-Lite (Free)',
+                    'gemini-2.0-flash-thinking-exp' => 'Gemini 2.0 Flash Thinking (Free)',
+                    'gemini-2.0-pro' => 'Gemini 2.0 Pro',
+                    'gemini-1.5-flash' => 'Gemini 1.5 Flash (Free)',
                     'gemini-1.5-pro' => 'Gemini 1.5 Pro'
                 ]
             ],
@@ -53,8 +62,14 @@ switch ($action) {
                 'name' => 'Anthropic Claude',
                 'has_key' => $security->hasApiKey('claude'),
                 'models' => [
-                    'claude-sonnet-4-20250514' => 'Claude Sonnet 4',
-                    'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet',
+                    'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5 (Recommended)',
+                    'claude-opus-4-5-20251101' => 'Claude Opus 4.5 (Most Intelligent)',
+                    'claude-haiku-4-5' => 'Claude Haiku 4.5 (Fastest)',
+                    'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Oct 2024)',
+                    'claude-3-5-sonnet-20240620' => 'Claude 3.5 Sonnet (Jun 2024)',
+                    'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku',
+                    'claude-3-opus-20240229' => 'Claude 3 Opus',
+                    'claude-3-sonnet-20240229' => 'Claude 3 Sonnet',
                     'claude-3-haiku-20240307' => 'Claude 3 Haiku'
                 ]
             ],
@@ -62,9 +77,40 @@ switch ($action) {
                 'name' => 'OpenAI',
                 'has_key' => $security->hasApiKey('openai'),
                 'models' => [
+                    // GPT-5.2 (Latest - December 2025)
+                    'gpt-5.2' => 'GPT-5.2 (Latest Flagship)',
+                    'gpt-5.2-2025-12-11' => 'GPT-5.2 (Dec 2025)',
+                    'gpt-5.2-chat-latest' => 'GPT-5.2 Chat Instant',
+                    'gpt-5.2-pro' => 'GPT-5.2 Pro',
+                    // GPT-5.1 (November 2025)
+                    'gpt-5.1' => 'GPT-5.1',
+                    'gpt-5.1-2025-11-13' => 'GPT-5.1 (Nov 2025)',
+                    'gpt-5.1-chat-latest' => 'GPT-5.1 Chat Instant',
+                    'gpt-5.1-codex' => 'GPT-5.1 Codex (Coding)',
+                    'gpt-5.1-codex-mini' => 'GPT-5.1 Codex Mini',
+                    // GPT-5 (August 2025)
+                    'gpt-5' => 'GPT-5',
+                    'gpt-5-2025-08-07' => 'GPT-5 (Aug 2025)',
+                    'gpt-5-mini' => 'GPT-5 Mini',
+                    'gpt-5-mini-2025-08-07' => 'GPT-5 Mini (Aug 2025)',
+                    'gpt-5-nano' => 'GPT-5 Nano',
+                    'gpt-5-nano-2025-08-07' => 'GPT-5 Nano (Aug 2025)',
+                    'gpt-5-chat-latest' => 'GPT-5 Chat',
+                    // O-series Reasoning
+                    'o3' => 'O3 (Reasoning)',
+                    'o3-mini' => 'O3 Mini',
+                    'o3-pro' => 'O3 Pro',
+                    'o4-mini' => 'O4 Mini',
+                    'o1' => 'O1',
+                    // GPT-4.1 family
+                    'gpt-4.1' => 'GPT-4.1 (1M context)',
+                    'gpt-4.1-mini' => 'GPT-4.1 Mini',
+                    'gpt-4.1-nano' => 'GPT-4.1 Nano',
+                    // GPT-4 family
                     'gpt-4o' => 'GPT-4o',
                     'gpt-4o-mini' => 'GPT-4o Mini',
-                    'gpt-4-turbo' => 'GPT-4 Turbo'
+                    'gpt-4-turbo' => 'GPT-4 Turbo',
+                    'gpt-4' => 'GPT-4'
                 ]
             ]
         ];

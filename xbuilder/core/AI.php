@@ -22,10 +22,10 @@ class AI
     private string $provider;
     private ?string $apiKey;
 
-    // Model configurations
+    // Model configurations (defaults - can be overridden via config)
     private array $models = [
-        'claude' => 'claude-sonnet-4-20250514',
-        'gemini' => 'gemini-2.5-flash',
+        'claude' => 'claude-sonnet-4-5-20250929',
+        'gemini' => 'gemini-2.0-flash',
         'openai' => 'gpt-4o-mini'
     ];
 
@@ -36,11 +36,32 @@ class AI
         'openai' => 'https://api.openai.com/v1/chat/completions'
     ];
 
-    public function __construct(string $provider, ?Security $security = null)
+    public function __construct(string $provider, ?Security $security = null, ?string $customModel = null)
     {
         $this->security = $security ?? new Security();
         $this->provider = $provider;
         $this->apiKey = $this->security->getApiKey($provider);
+
+        // Override default model if custom model specified
+        if ($customModel) {
+            $this->models[$provider] = $customModel;
+        }
+    }
+
+    /**
+     * Set the model for the current provider
+     */
+    public function setModel(string $model): void
+    {
+        $this->models[$this->provider] = $model;
+    }
+
+    /**
+     * Get the current model for the provider
+     */
+    public function getModel(): string
+    {
+        return $this->models[$this->provider] ?? '';
     }
 
     /**

@@ -196,11 +196,25 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
 <body class="font-sans text-white h-screen flex flex-col">
     <!-- Header -->
     <header class="bg-dark-800 border-b border-dark-600 px-4 py-3 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl">🚀</span>
-            <h1 class="text-lg font-semibold">XBuilder</h1>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🚀</span>
+                <h1 class="text-lg font-semibold">XBuilder</h1>
+            </div>
+
+            <!-- Inline Model Switcher -->
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-dark-700 rounded-lg border border-dark-600">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <select id="quickModelSwitch" onchange="quickSwitchModel(this.value)"
+                        class="bg-transparent text-sm text-white border-none outline-none cursor-pointer pr-6 appearance-none"
+                        style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23888%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e'); background-position: right 0.25rem center; background-repeat: no-repeat; background-size: 1em;">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
         </div>
-        
+
         <div class="flex items-center gap-3">
             <!-- View Public Website Button (shows when site is published) -->
             <a href="/" target="_blank" id="viewSiteBtn"
@@ -377,6 +391,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
             setupDropZone();
             initResizeHandle();
             checkPublishedSite();
+            loadQuickModelSwitch();
         });
         
         // Load existing conversation
@@ -955,7 +970,116 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 console.log('[XBuilder] No published site found');
             }
         }
-        
+
+        // Quick Model Switcher
+        async function loadQuickModelSwitch() {
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_current' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    updateQuickModelSwitch(data);
+                    updateFooterProvider(data);
+                }
+            } catch (error) {
+                console.error('Failed to load model switcher:', error);
+            }
+        }
+
+        function updateQuickModelSwitch(data) {
+            const select = document.getElementById('quickModelSwitch');
+            if (!select) return;
+
+            const currentProvider = data.current_provider;
+            const currentModel = data.current_model;
+
+            let options = '';
+
+            // Build grouped options by provider
+            for (const [providerKey, provider] of Object.entries(data.providers)) {
+                if (!provider.has_key) continue; // Skip providers without API keys
+
+                const providerName = provider.name;
+                options += `<optgroup label="${providerName}">`;
+
+                for (const [modelKey, modelName] of Object.entries(provider.models)) {
+                    const isSelected = (providerKey === currentProvider && (!currentModel || modelKey === currentModel)) ? 'selected' : '';
+                    options += `<option value="${providerKey}:${modelKey}" ${isSelected}>${modelName}</option>`;
+                }
+
+                options += `</optgroup>`;
+            }
+
+            select.innerHTML = options;
+        }
+
+        function updateFooterProvider(data) {
+            const footer = document.getElementById('footerProvider');
+            if (!footer) return;
+
+            const providerName = data.providers[data.current_provider]?.name || 'Unknown';
+            const currentModel = data.current_model || 'default';
+            const modelDisplay = data.providers[data.current_provider]?.models[currentModel] || currentModel;
+
+            footer.textContent = `${providerName} - ${modelDisplay}`;
+        }
+
+        async function quickSwitchModel(value) {
+            if (!value) return;
+
+            const [provider, model] = value.split(':');
+
+            try {
+                // Get current settings first
+                const currentResponse = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_current' })
+                });
+                const currentData = await currentResponse.json();
+
+                // Switch provider if different
+                if (provider !== currentData.current_provider) {
+                    const providerResponse = await fetch('/xbuilder/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'switch_provider', provider })
+                    });
+
+                    const providerResult = await providerResponse.json();
+                    if (!providerResult.success) {
+                        alert(providerResult.error || 'Failed to switch provider');
+                        loadQuickModelSwitch(); // Reload to reset
+                        return;
+                    }
+                }
+
+                // Switch model
+                const modelResponse = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'switch_model', model })
+                });
+
+                const modelResult = await modelResponse.json();
+                if (modelResult.success) {
+                    // Reload to update display
+                    loadQuickModelSwitch();
+                } else {
+                    alert(modelResult.error || 'Failed to switch model');
+                    loadQuickModelSwitch(); // Reload to reset
+                }
+            } catch (error) {
+                console.error('Model switch failed:', error);
+                alert('Failed to switch model. Please try again.');
+                loadQuickModelSwitch(); // Reload to reset
+            }
+        }
+
         // Keyboard handling
         function handleKeydown(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -1143,11 +1267,22 @@ Please paste this information when reporting issues to help with debugging.
         }
     </script>
 
-    <!-- Version Footer -->
-    <div style="position: fixed !important; bottom: 1rem; left: 1rem; z-index: 9999; pointer-events: none;"
-         class="text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600">
-        XBuilder v<?php echo htmlspecialchars($version); ?>
-    </div>
+    <!-- Fixed Footer -->
+    <footer style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; pointer-events: none;"
+            class="bg-dark-800 border-t border-dark-700 px-4 py-2">
+        <div class="flex items-center justify-between text-xs text-gray-500">
+            <div class="flex items-center gap-4">
+                <span>XBuilder v<?php echo htmlspecialchars($version); ?></span>
+                <span class="text-gray-600">|</span>
+                <span id="footerProvider">Loading...</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="https://github.com/Asif2BD/xBuilderCMS" target="_blank" class="hover:text-gray-400 transition pointer-events-auto">GitHub</a>
+                <span class="text-gray-600">|</span>
+                <span>© <?php echo date('Y'); ?> Asif Rahman</span>
+            </div>
+        </div>
+    </footer>
 
     <!-- Update Modal -->
     <div id="updateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
@@ -1495,6 +1630,22 @@ Please paste this information when reporting issues to help with debugging.
                     </div>
 
                     ${providersHtml}
+
+                    <!-- Reset XBuilder Section -->
+                    <div class="bg-red-900/20 border border-red-800 rounded-lg p-4 mt-8">
+                        <div class="flex gap-3">
+                            <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="font-semibold text-red-400 mb-1">Danger Zone</p>
+                                <p class="text-sm text-red-300 mb-3">Reset XBuilder to factory settings. This will delete ALL data and return to the install screen.</p>
+                                <button onclick="resetXBuilder()" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition font-medium">
+                                    Reset XBuilder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         }
@@ -1592,6 +1743,40 @@ Please paste this information when reporting issues to help with debugging.
                 }
             } catch (error) {
                 alert('Failed to delete API key');
+            }
+        }
+
+        async function resetXBuilder() {
+            // Multi-step confirmation
+            const step1 = confirm('⚠️ WARNING: This will DELETE ALL DATA including:\n\n• All API keys\n• All conversations\n• Generated website\n• All uploads\n• All configuration\n\nThis action CANNOT be undone!\n\nAre you sure you want to reset XBuilder?');
+
+            if (!step1) return;
+
+            const step2 = prompt('To confirm, type "RESET_XBUILDER" (without quotes):');
+
+            if (step2 !== 'RESET_XBUILDER') {
+                alert('Reset cancelled - confirmation text did not match.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/xbuilder/api/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: 'RESET_XBUILDER' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ XBuilder has been reset successfully!\n\nYou will now be redirected to the setup wizard.');
+                    window.location.href = '/xbuilder/setup';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to reset'));
+                }
+            } catch (error) {
+                console.error('Reset failed:', error);
+                alert('Failed to reset XBuilder. Please try again or contact support.');
             }
         }
 
