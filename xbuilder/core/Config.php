@@ -133,9 +133,34 @@ class Config
         $this->config['ai_provider'] = $aiProvider;
         $this->config['created_at'] = date('c');
         $this->config['site_generated'] = false;
-        $this->config['version'] = '1.0.0';
+        $this->config['version'] = $this->getAppVersion();
 
         return $this->save();
+    }
+
+    /**
+     * Get XBuilder application version
+     */
+    public function getAppVersion(): string
+    {
+        $versionFile = dirname(__DIR__, 2) . '/VERSION';
+
+        if (file_exists($versionFile)) {
+            $version = trim(file_get_contents($versionFile));
+            if (!empty($version)) {
+                return $version;
+            }
+        }
+
+        return '0.2.0'; // Fallback version
+    }
+
+    /**
+     * Get the installed version from config
+     */
+    public function getInstalledVersion(): string
+    {
+        return $this->get('version', '0.0.0');
     }
 
     /**

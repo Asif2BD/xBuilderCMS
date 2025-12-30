@@ -1,8 +1,14 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
+
 **Create stunning, unique websites through conversation with AI.**
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
+
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.2.0** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -138,37 +144,99 @@ You: Add a testimonials section
 AI: [Adds a new testimonials section]
 ```
 
-## 🛠️ Configuration
+## 🛠️ Web Server Configuration
 
-### Nginx Configuration
+XBuilder works with **Apache**, **Nginx**, and **OpenLiteSpeed**. Configuration files are included for all three.
 
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    root /var/www/xbuilder;
-    index index.php index.html;
+### Apache (Recommended for Shared Hosting)
 
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
+✅ **No configuration needed!** The included `.htaccess` file handles everything automatically.
 
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.0-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
+Just upload all files and visit your domain.
 
-    # Protect storage directory
-    location ~ ^/xbuilder/storage {
-        deny all;
-    }
-}
+### Nginx
+
+1. Copy the included `nginx.conf` file contents
+2. Add to your Nginx server block (usually in `/etc/nginx/sites-available/`)
+3. Update the paths:
+   - `root /var/www/xBuilderCMS;` (your installation path)
+   - `server_name yourdomain.com;` (your domain)
+   - `fastcgi_pass unix:/var/run/php/php8.0-fpm.sock;` (your PHP-FPM socket)
+4. Test config: `sudo nginx -t`
+5. Reload Nginx: `sudo systemctl reload nginx`
+
+**Quick Setup:**
+```bash
+sudo nano /etc/nginx/sites-available/xbuilder
+# Paste the nginx.conf contents and adjust paths
+sudo ln -s /etc/nginx/sites-available/xbuilder /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### Apache Configuration
+See the `nginx.conf` file for the complete configuration.
 
-The included `.htaccess` file handles everything automatically.
+### OpenLiteSpeed
+
+1. Rename `.htaccess.litespeed` to `.htaccess`
+2. Or copy `.htaccess.litespeed` contents to your existing `.htaccess`
+3. OpenLiteSpeed automatically reads `.htaccess` files
+
+**Includes LiteSpeed Cache optimization for better performance!**
+
+### Testing Your Setup
+
+After configuring your web server:
+1. Visit `http://yourdomain.com`
+2. You should be redirected to `/xbuilder/setup`
+3. Complete the setup wizard
+4. Start building your website!
+
+## 📋 Versioning & Changelog
+
+XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for new features (backward compatible)
+- **PATCH** version for bug fixes (backward compatible)
+
+**Current Version: 0.2.0**
+
+### Version History
+
+**v0.2.0** (2025-12-30) - Multi-Server Support
+- ✅ Full compatibility with Apache, Nginx, and OpenLiteSpeed
+- ✅ Production-ready configurations for all three servers
+- ✅ Comprehensive deployment guide (DEPLOYMENT.md)
+- ✅ Fixed 403 directory access error
+
+**v0.1.4** (2025-12-30) - Gemini API Fix
+- ✅ Fixed Gemini API compatibility (v1beta → v1)
+- ✅ Updated to gemini-1.5-flash-latest model
+
+**v0.1.3** (2025-12-30) - License Update
+- ✅ Updated license to AGPL-3.0
+- ✅ Added personal attribution to README
+
+**v0.1.2** (2025-12-28) - Codebase Unification
+- ✅ Merged best features from parallel development branches
+- ✅ Enhanced Security, Generator, AI, Config classes
+- ✅ Unified instance-based architecture
+
+**v0.1.1** (2025-12-28) - Security Enhancements
+- ✅ Session namespacing and CSRF protection
+- ✅ Argon2id password hashing
+- ✅ Rate limiting on failed logins
+
+**v0.1.0** (2025-12-28) - Initial Release 🎉
+- 🚀 AI-powered website generation
+- 🤖 Multi-provider support (Claude, Gemini, OpenAI)
+- 📄 Document upload and parsing
+- 🔒 Secure authentication and encryption
+- 🎨 Unique, template-free designs
+
+**v0.0.1** (2025-12-28) - Project Initialization
+- 📦 Initial project structure
+
+📖 **[View Full Changelog →](CHANGELOG.md)** for detailed changes, upgrade notes, and roadmap.
 
 ## 🤝 Contributing
 
@@ -180,9 +248,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+Please read [CHANGELOG.md](CHANGELOG.md) to understand our versioning system.
+
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+
+The AGPL-3.0 license ensures that if you modify and deploy XBuilder on a server, you must make your source code available to users.
 
 ## 🙏 Acknowledgments
 

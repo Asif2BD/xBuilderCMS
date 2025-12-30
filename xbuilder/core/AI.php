@@ -25,14 +25,14 @@ class AI
     // Model configurations
     private array $models = [
         'claude' => 'claude-sonnet-4-20250514',
-        'gemini' => 'gemini-1.5-flash',
+        'gemini' => 'gemini-1.5-flash-latest',
         'openai' => 'gpt-4o-mini'
     ];
 
     // API endpoints
     private array $endpoints = [
         'claude' => 'https://api.anthropic.com/v1/messages',
-        'gemini' => 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+        'gemini' => 'https://generativelanguage.googleapis.com/v1/models/{model}:generateContent',
         'openai' => 'https://api.openai.com/v1/chat/completions'
     ];
 
