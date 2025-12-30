@@ -1630,6 +1630,22 @@ Please paste this information when reporting issues to help with debugging.
                     </div>
 
                     ${providersHtml}
+
+                    <!-- Reset XBuilder Section -->
+                    <div class="bg-red-900/20 border border-red-800 rounded-lg p-4 mt-8">
+                        <div class="flex gap-3">
+                            <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="font-semibold text-red-400 mb-1">Danger Zone</p>
+                                <p class="text-sm text-red-300 mb-3">Reset XBuilder to factory settings. This will delete ALL data and return to the install screen.</p>
+                                <button onclick="resetXBuilder()" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition font-medium">
+                                    Reset XBuilder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         }
@@ -1727,6 +1743,40 @@ Please paste this information when reporting issues to help with debugging.
                 }
             } catch (error) {
                 alert('Failed to delete API key');
+            }
+        }
+
+        async function resetXBuilder() {
+            // Multi-step confirmation
+            const step1 = confirm('⚠️ WARNING: This will DELETE ALL DATA including:\n\n• All API keys\n• All conversations\n• Generated website\n• All uploads\n• All configuration\n\nThis action CANNOT be undone!\n\nAre you sure you want to reset XBuilder?');
+
+            if (!step1) return;
+
+            const step2 = prompt('To confirm, type "RESET_XBUILDER" (without quotes):');
+
+            if (step2 !== 'RESET_XBUILDER') {
+                alert('Reset cancelled - confirmation text did not match.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/xbuilder/api/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: 'RESET_XBUILDER' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ XBuilder has been reset successfully!\n\nYou will now be redirected to the setup wizard.');
+                    window.location.href = '/xbuilder/setup';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to reset'));
+                }
+            } catch (error) {
+                console.error('Reset failed:', error);
+                alert('Failed to reset XBuilder. Please try again or contact support.');
             }
         }
 

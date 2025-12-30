@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2025-12-30
+
+### Added
+- **Reset XBuilder feature**: Factory reset from settings modal
+  - "Reset XBuilder" button in Settings → Danger Zone section
+  - Two-step confirmation: dialog + text confirmation ("RESET_XBUILDER")
+  - Deletes all API keys (securely overwritten before deletion)
+  - Deletes all conversations, uploads, generated site, backups
+  - Clears configuration and sessions
+  - Redirects to setup wizard after reset
+  - Perfect for testing or starting fresh
+
+### Security
+- Secure API key deletion: overwrites with random bytes before unlinking
+- Requires authentication to access reset endpoint
+- Two-step confirmation prevents accidental resets
+
 ## [0.7.1] - 2025-12-30
 
 ### Fixed
