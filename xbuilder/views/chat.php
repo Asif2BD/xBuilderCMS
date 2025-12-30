@@ -1,3 +1,8 @@
+<?php
+// Get XBuilder version
+$versionFile = dirname(__DIR__, 2) . '/VERSION';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.2.0';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -613,5 +618,10 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
             el.style.height = Math.min(el.scrollHeight, 200) + 'px';
         }
     </script>
+
+    <!-- Version Footer -->
+    <div class="fixed bottom-4 left-4 text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600 z-50">
+        XBuilder v<?php echo htmlspecialchars($version); ?>
+    </div>
 </body>
 </html>

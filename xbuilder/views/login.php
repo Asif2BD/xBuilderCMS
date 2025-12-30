@@ -1,3 +1,8 @@
+<?php
+// Get XBuilder version
+$versionFile = dirname(__DIR__, 2) . '/VERSION';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.2.0';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -133,5 +138,10 @@
             btn.disabled = false;
         }
     </script>
+
+    <!-- Version Footer -->
+    <div class="fixed bottom-4 right-4 text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600">
+        XBuilder v<?php echo htmlspecialchars($version); ?>
+    </div>
 </body>
 </html>
