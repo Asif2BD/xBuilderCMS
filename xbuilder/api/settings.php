@@ -44,41 +44,51 @@ switch ($action) {
                 'name' => 'Google Gemini',
                 'has_key' => $security->hasApiKey('gemini'),
                 'models' => [
-                    'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Free - Experimental)',
-                    'gemini-2.0-flash-thinking-exp-01-21' => 'Gemini 2.0 Flash Thinking (Free)',
+                    'gemini-3-pro' => 'Gemini 3 Pro (Latest - Nov 2025)',
+                    'gemini-3-flash' => 'Gemini 3 Flash (Latest)',
+                    'gemini-3-deep-think' => 'Gemini 3 Deep Think',
+                    'gemini-2.5-pro' => 'Gemini 2.5 Pro',
+                    'gemini-2.5-flash' => 'Gemini 2.5 Flash',
+                    'gemini-2.5-flash-lite' => 'Gemini 2.5 Flash-Lite (Speed)',
+                    'gemini-2.0-flash' => 'Gemini 2.0 Flash (Free)',
+                    'gemini-2.0-flash-lite' => 'Gemini 2.0 Flash-Lite (Free)',
+                    'gemini-2.0-flash-thinking-exp' => 'Gemini 2.0 Flash Thinking (Free)',
+                    'gemini-2.0-pro' => 'Gemini 2.0 Pro',
                     'gemini-1.5-flash' => 'Gemini 1.5 Flash (Free)',
-                    'gemini-1.5-flash-8b' => 'Gemini 1.5 Flash-8B (Free)',
-                    'gemini-1.5-pro' => 'Gemini 1.5 Pro (Paid)',
-                    'gemini-exp-1206' => 'Gemini Experimental 1206 (Free)'
+                    'gemini-1.5-pro' => 'Gemini 1.5 Pro'
                 ]
             ],
             'claude' => [
                 'name' => 'Anthropic Claude',
                 'has_key' => $security->hasApiKey('claude'),
                 'models' => [
-                    'claude-sonnet-4-20250514' => 'Claude Sonnet 4 (Latest)',
-                    'claude-opus-4-20250514' => 'Claude Opus 4 (Most Capable)',
-                    'claude-3-7-sonnet-20250219' => 'Claude 3.7 Sonnet',
+                    'claude-sonnet-4-5-20250929' => 'Claude Sonnet 4.5 (Recommended)',
+                    'claude-opus-4-5-20251101' => 'Claude Opus 4.5 (Most Intelligent)',
+                    'claude-haiku-4-5' => 'Claude Haiku 4.5 (Fastest)',
                     'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Oct 2024)',
                     'claude-3-5-sonnet-20240620' => 'Claude 3.5 Sonnet (Jun 2024)',
-                    'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku (Fast)',
+                    'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku',
                     'claude-3-opus-20240229' => 'Claude 3 Opus',
                     'claude-3-sonnet-20240229' => 'Claude 3 Sonnet',
-                    'claude-3-haiku-20240307' => 'Claude 3 Haiku (Cheapest)'
+                    'claude-3-haiku-20240307' => 'Claude 3 Haiku'
                 ]
             ],
             'openai' => [
                 'name' => 'OpenAI',
                 'has_key' => $security->hasApiKey('openai'),
                 'models' => [
-                    'gpt-4o' => 'GPT-4o (Recommended)',
-                    'gpt-4o-mini' => 'GPT-4o Mini (Fast & Cheap)',
+                    'o3' => 'O3 (Latest Reasoning - Jan 2025)',
+                    'o3-mini' => 'O3 Mini (Fast Reasoning)',
+                    'o3-pro' => 'O3 Pro (Advanced Reasoning)',
+                    'o4-mini' => 'O4 Mini (Newest)',
+                    'gpt-4.1' => 'GPT-4.1 (1M context)',
+                    'gpt-4.1-mini' => 'GPT-4.1 Mini',
+                    'gpt-4.1-nano' => 'GPT-4.1 Nano (Fastest)',
+                    'gpt-4o' => 'GPT-4o',
+                    'gpt-4o-mini' => 'GPT-4o Mini',
                     'gpt-4-turbo' => 'GPT-4 Turbo',
-                    'gpt-4-turbo-preview' => 'GPT-4 Turbo Preview',
-                    'gpt-4' => 'GPT-4 (Classic)',
-                    'o1' => 'O1 (Reasoning)',
-                    'o1-mini' => 'O1 Mini (Fast Reasoning)',
-                    'o3-mini' => 'O3 Mini (Latest Reasoning)'
+                    'gpt-4' => 'GPT-4',
+                    'o1' => 'O1 (Previous Reasoning)'
                 ]
             ]
         ];

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2025-12-30
+
+### Fixed
+- **Critical: Updated to current API models (December 2025)**:
+  - **Claude**: Added 4.5 family - Sonnet 4.5, Opus 4.5, Haiku 4.5 (latest models)
+  - **OpenAI**: Added O3, O3-Mini, O3-Pro, O4-Mini, GPT-4.1 family (1M context)
+  - **Gemini**: Added 3.x family (3 Pro, 3 Flash, 3 Deep Think), 2.5 family, complete 2.0 lineup
+  - Removed non-existent models from previous version
+  - Updated default models to latest stable versions
+
+### Note
+- GPT-5 does not exist yet (user was mistaken)
+- Claude Opus 4.5 is the most intelligent Claude model
+- Gemini 3 Pro is the latest Gemini (released Nov 2025)
+- All model names verified against official API documentation
+
 ## [0.7.0] - 2025-12-30
 
 ### Added

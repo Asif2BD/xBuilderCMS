@@ -22,10 +22,10 @@ class AI
     private string $provider;
     private ?string $apiKey;
 
-    // Model configurations
+    // Model configurations (defaults - can be overridden via config)
     private array $models = [
-        'claude' => 'claude-sonnet-4-20250514',
-        'gemini' => 'gemini-2.0-flash-exp',
+        'claude' => 'claude-sonnet-4-5-20250929',
+        'gemini' => 'gemini-2.0-flash',
         'openai' => 'gpt-4o-mini'
     ];
 
