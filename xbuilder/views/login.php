@@ -1,7 +1,7 @@
 <?php
 // Get XBuilder version
 $versionFile = dirname(__DIR__, 2) . '/VERSION';
-$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.2.0';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.3.3';
 ?>
 <!DOCTYPE html>
 <html lang="en">

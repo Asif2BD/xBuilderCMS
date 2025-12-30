@@ -1,7 +1,7 @@
 <?php
 // Get XBuilder version
 $versionFile = dirname(__DIR__, 2) . '/VERSION';
-$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.2.0';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.3.3';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -220,11 +220,11 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 <div class="flex-1"></div>
                 
                 <button onclick="publishSite()" id="publishBtn"
-                        class="hidden m-2 px-4 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded-lg transition flex items-center gap-2">
+                        class="hidden m-2 px-4 py-2 text-sm bg-green-600 hover:bg-green-700 rounded-lg transition flex items-center gap-2 font-medium">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    Publish
+                    <span>Publish to Live Site</span>
                 </button>
             </div>
             
@@ -305,24 +305,83 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
         async function sendMessage() {
             const input = document.getElementById('userInput');
             const message = input.value.trim();
-            
+
             if (!message || isLoading) return;
-            
+
             // Add user message to UI
             addMessageToUI('user', message);
             conversationHistory.push({ role: 'user', content: message });
-            
+
             // Clear input
             input.value = '';
             autoResize(input);
-            
+
+            // Check if message contains LinkedIn URL
+            const linkedinMatch = message.match(/https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[^\s]+/i);
+            let linkedinData = null;
+
+            if (linkedinMatch) {
+                const linkedinUrl = linkedinMatch[0];
+                console.log('[XBuilder] LinkedIn URL detected:', linkedinUrl);
+
+                // Show status that we're fetching LinkedIn
+                showTypingIndicator();
+                isLoading = true;
+
+                // Add status message
+                const statusMsg = addMessageToUI('assistant', '🔍 Fetching LinkedIn profile...', false);
+
+                try {
+                    const linkedinResponse = await fetch('/xbuilder/api/linkedin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: linkedinUrl })
+                    });
+
+                    const linkedinResult = await linkedinResponse.json();
+
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+
+                    if (linkedinResult.success) {
+                        linkedinData = linkedinResult.content;
+                        console.log('[XBuilder] LinkedIn profile fetched:', linkedinResult.structured.name);
+                        addMessageToUI('assistant', `✓ Got it! I've fetched your LinkedIn profile for **${linkedinResult.structured.name}**. Creating your website now...`);
+                    } else {
+                        console.warn('[XBuilder] LinkedIn fetch failed:', linkedinResult.error);
+                        addMessageToUI('assistant', `⚠️ I couldn't access that LinkedIn profile (it may be private). You can upload your CV instead, or tell me about yourself!`);
+                        hideTypingIndicator();
+                        isLoading = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('[XBuilder] LinkedIn fetch error:', error);
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+                    addMessageToUI('assistant', `⚠️ Couldn't fetch LinkedIn profile. You can upload your CV or tell me about yourself instead!`);
+                    hideTypingIndicator();
+                    isLoading = false;
+                    return;
+                }
+            }
+
             // Show typing indicator
             showTypingIndicator();
             isLoading = true;
 
+            // Combine uploaded document and LinkedIn data
+            let documentToSend = uploadedDocument;
+            if (linkedinData) {
+                documentToSend = linkedinData + (uploadedDocument ? '\n\n---\n\n' + uploadedDocument : '');
+            }
+
             // Log if sending document
-            if (uploadedDocument) {
-                console.log('[XBuilder] Sending message WITH document:', uploadedDocument.length, 'chars');
+            if (documentToSend) {
+                console.log('[XBuilder] Sending message WITH document:', documentToSend.length, 'chars');
             } else {
                 console.log('[XBuilder] Sending message WITHOUT document');
             }
@@ -334,7 +393,7 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                     body: JSON.stringify({
                         message: message,
                         history: conversationHistory.slice(0, -1), // Don't include the message we just added
-                        document: uploadedDocument
+                        document: documentToSend
                     })
                 });
                 
@@ -483,27 +542,30 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 const data = await response.json();
                 
                 if (data.success) {
-                    btn.innerHTML = '✓ Published!';
+                    btn.innerHTML = '✓ Published to Live Site!';
                     btn.classList.remove('bg-green-600', 'hover:bg-green-700');
                     btn.classList.add('bg-emerald-600');
-                    
-                    // Show success message
-                    addMessageToUI('assistant', `🎉 **Your website is live!**\n\nVisit it at: [${window.location.origin}](${window.location.origin})\n\nYou can continue chatting to make changes, or close this tab.`);
-                    
+
+                    // Get the root domain URL (without /xbuilder/ path)
+                    const rootUrl = window.location.origin;
+
+                    // Show success message with clear instructions
+                    addMessageToUI('assistant', `🎉 **Your website is now LIVE!**\n\n📍 **Live URL**: [${rootUrl}](${rootUrl}) (open in new tab)\n\n✅ **Published to**: Root domain (\`/site/index.html\`)\n🔧 **Admin Panel**: [${rootUrl}/xbuilder/](${rootUrl}/xbuilder/)\n\n💡 You can continue chatting to make changes, then publish again to update your live site.`);
+
                     setTimeout(() => {
-                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                         btn.classList.add('bg-green-600', 'hover:bg-green-700');
                         btn.classList.remove('bg-emerald-600');
                         btn.disabled = false;
-                    }, 3000);
+                    }, 5000);
                 } else {
                     alert('Failed to publish: ' + (data.error || 'Unknown error'));
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                     btn.disabled = false;
                 }
             } catch (error) {
                 alert('Connection error. Please try again.');
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                 btn.disabled = false;
             }
         }
