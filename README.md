@@ -138,37 +138,52 @@ You: Add a testimonials section
 AI: [Adds a new testimonials section]
 ```
 
-## 🛠️ Configuration
+## 🛠️ Web Server Configuration
 
-### Nginx Configuration
+XBuilder works with **Apache**, **Nginx**, and **OpenLiteSpeed**. Configuration files are included for all three.
 
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    root /var/www/xbuilder;
-    index index.php index.html;
+### Apache (Recommended for Shared Hosting)
 
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
+✅ **No configuration needed!** The included `.htaccess` file handles everything automatically.
 
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.0-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
+Just upload all files and visit your domain.
 
-    # Protect storage directory
-    location ~ ^/xbuilder/storage {
-        deny all;
-    }
-}
+### Nginx
+
+1. Copy the included `nginx.conf` file contents
+2. Add to your Nginx server block (usually in `/etc/nginx/sites-available/`)
+3. Update the paths:
+   - `root /var/www/xBuilderCMS;` (your installation path)
+   - `server_name yourdomain.com;` (your domain)
+   - `fastcgi_pass unix:/var/run/php/php8.0-fpm.sock;` (your PHP-FPM socket)
+4. Test config: `sudo nginx -t`
+5. Reload Nginx: `sudo systemctl reload nginx`
+
+**Quick Setup:**
+```bash
+sudo nano /etc/nginx/sites-available/xbuilder
+# Paste the nginx.conf contents and adjust paths
+sudo ln -s /etc/nginx/sites-available/xbuilder /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### Apache Configuration
+See the `nginx.conf` file for the complete configuration.
 
-The included `.htaccess` file handles everything automatically.
+### OpenLiteSpeed
+
+1. Rename `.htaccess.litespeed` to `.htaccess`
+2. Or copy `.htaccess.litespeed` contents to your existing `.htaccess`
+3. OpenLiteSpeed automatically reads `.htaccess` files
+
+**Includes LiteSpeed Cache optimization for better performance!**
+
+### Testing Your Setup
+
+After configuring your web server:
+1. Visit `http://yourdomain.com`
+2. You should be redirected to `/xbuilder/setup`
+3. Complete the setup wizard
+4. Start building your website!
 
 ## 🤝 Contributing
 
