@@ -200,25 +200,43 @@ XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
 
 **Current Version: 0.2.0**
 
-See the [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes in each version.
+### Version History
 
-### Recent Updates
-
-**v0.2.0** (2025-12-30)
-- ✅ Multi-server support: Apache, Nginx, OpenLiteSpeed
-- ✅ Complete deployment guides
+**v0.2.0** (2025-12-30) - Multi-Server Support
+- ✅ Full compatibility with Apache, Nginx, and OpenLiteSpeed
+- ✅ Production-ready configurations for all three servers
+- ✅ Comprehensive deployment guide (DEPLOYMENT.md)
 - ✅ Fixed 403 directory access error
 
-**v0.1.4** (2025-12-30)
-- ✅ Fixed Gemini API compatibility issue
+**v0.1.4** (2025-12-30) - Gemini API Fix
+- ✅ Fixed Gemini API compatibility (v1beta → v1)
+- ✅ Updated to gemini-1.5-flash-latest model
 
-**v0.1.3** (2025-12-30)
+**v0.1.3** (2025-12-30) - License Update
 - ✅ Updated license to AGPL-3.0
+- ✅ Added personal attribution to README
 
-**v0.1.0** (2025-12-28)
-- 🎉 Initial release with complete Phase 1 features
+**v0.1.2** (2025-12-28) - Codebase Unification
+- ✅ Merged best features from parallel development branches
+- ✅ Enhanced Security, Generator, AI, Config classes
+- ✅ Unified instance-based architecture
 
-[View Full Changelog →](CHANGELOG.md)
+**v0.1.1** (2025-12-28) - Security Enhancements
+- ✅ Session namespacing and CSRF protection
+- ✅ Argon2id password hashing
+- ✅ Rate limiting on failed logins
+
+**v0.1.0** (2025-12-28) - Initial Release 🎉
+- 🚀 AI-powered website generation
+- 🤖 Multi-provider support (Claude, Gemini, OpenAI)
+- 📄 Document upload and parsing
+- 🔒 Secure authentication and encryption
+- 🎨 Unique, template-free designs
+
+**v0.0.1** (2025-12-28) - Project Initialization
+- 📦 Initial project structure
+
+📖 **[View Full Changelog →](CHANGELOG.md)** for detailed changes, upgrade notes, and roadmap.
 
 ## 🤝 Contributing
 
