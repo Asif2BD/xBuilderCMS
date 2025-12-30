@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-30
+
+### Added
+- **Debug info copy button**: One-click debugging for easier troubleshooting
+  - New "Debug" button in chat header
+  - Collects comprehensive debug information (version, browser, conversation state, document status)
+  - Captures console logs automatically (last 100 entries)
+  - Copies all debug info to clipboard with one click
+  - Visual feedback: button turns green and shows "Copied!" on success
+  - Includes recent messages preview for context
+  - Makes it easy for users to share debug information when reporting issues
+  - No need to open DevTools or inspect network requests
+
 ## [0.4.2] - 2025-12-30
 
 ### Fixed
