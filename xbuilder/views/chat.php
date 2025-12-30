@@ -724,7 +724,8 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
     </script>
 
     <!-- Version Footer -->
-    <div class="fixed bottom-4 left-4 text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600 z-50">
+    <div style="position: fixed !important; bottom: 1rem; left: 1rem; z-index: 9999; pointer-events: none;"
+         class="text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600">
         XBuilder v<?php echo htmlspecialchars($version); ?>
     </div>
 </body>
