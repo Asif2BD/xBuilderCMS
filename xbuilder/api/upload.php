@@ -102,11 +102,15 @@ if (!is_dir($uploadsDir)) {
 $savedPath = $uploadsDir . '/' . time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
 move_uploaded_file($tmpPath, $savedPath);
 
+// Log the extraction for debugging
+error_log("[XBuilder Upload] File: {$filename}, Size: {$size} bytes, Extracted: " . strlen($content) . " chars");
+
 echo json_encode([
     'success' => true,
     'filename' => $filename,
     'content' => $content,
-    'length' => strlen($content)
+    'length' => strlen($content),
+    'preview' => substr($content, 0, 200) . '...'
 ]);
 
 /**

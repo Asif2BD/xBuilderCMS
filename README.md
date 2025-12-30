@@ -1,6 +1,6 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
-[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
@@ -8,7 +8,7 @@
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
 
-> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.3.1** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.3.3** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -198,13 +198,24 @@ XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
 - **MINOR** version for new features (backward compatible)
 - **PATCH** version for bug fixes (backward compatible)
 
-**Current Version: 0.3.1**
+**Current Version: 0.3.3**
 
 ### Version History
 
-**v0.3.1** (2025-12-30) - Bug Fix
-- ✅ Fixed Gemini API model name (removed incorrect -latest suffix)
-- ✅ Gemini now works correctly with v1 API
+**v0.3.3** (2025-12-30) - Document Upload Fix
+- ✅ Fixed PDF/CV upload - AI now receives document content
+- ✅ Installed pdftotext for proper PDF extraction
+- ✅ Added word count and preview feedback
+- ✅ Comprehensive logging and debugging
+
+**v0.3.2** (2025-12-30) - Gemini API Compatibility Fix
+- ✅ Updated to gemini-2.5-flash (current stable production model)
+- ✅ Gemini 1.5 models are deprecated in Google's v1 API
+- ✅ Gemini integration now fully functional
+
+**v0.3.1** (2025-12-30) - Incomplete Fix
+- ⚠️ Attempted Gemini fix with deprecated model name
+- ❌ Used gemini-1.5-flash which is no longer available in v1 API
 
 **v0.3.0** (2025-12-30) - Platform Enhancements
 - ✅ Version display in all UI pages (Setup, Login, Chat)

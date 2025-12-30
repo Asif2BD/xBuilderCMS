@@ -7,14 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-12-30
+
+### Fixed
+- **Document upload not working**: AI was not receiving uploaded CV/document content
+  - Installed poppler-utils (pdftotext) for proper PDF text extraction
+  - Added comprehensive logging throughout upload and chat pipeline
+  - Frontend now shows word count and extraction preview
+  - Clear visual feedback: "Document ready - will be sent with your next message"
+  - Console logging helps debug document sending process
+  - Users can now successfully upload CVs and have AI read the content
+
+## [0.3.2] - 2025-12-30
+
+### Fixed
+- **Gemini API model compatibility**: Updated to current stable production model
+  - Changed from `gemini-1.5-flash` to `gemini-2.5-flash`
+  - Gemini 1.5 models are no longer available in Google's v1 API
+  - Using gemini-2.5-flash (current stable production model as of December 2025)
+  - Resolves error: "models/gemini-1.5-flash is not found for API version v1"
+  - Gemini integration now uses correct, supported model
+
 ## [0.3.1] - 2025-12-30
 
 ### Fixed
-- **Gemini API model name**: Removed incorrect `-latest` suffix
+- **Gemini API model name**: Attempted fix with incorrect model name
   - Changed from `gemini-1.5-flash-latest` to `gemini-1.5-flash`
-  - The v1 API does not support the `-latest` suffix
-  - Fixes error: "models/gemini-1.5-flash-latest is not found for API version v1"
-  - Gemini integration now works correctly
+  - This fix was incomplete as Gemini 1.5 models are deprecated in v1 API
 
 ## [0.3.0] - 2025-12-30
 
@@ -155,10 +174,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
-- **0.3.1** - Bug fix (Gemini API model name correction)
+- **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
+- **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
+- **0.3.1** - Incomplete fix (used deprecated Gemini 1.5 model)
 - **0.3.0** - Platform enhancements (version display, automation)
 - **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)
-- **0.1.4** - Gemini API compatibility fix
+- **0.1.4** - Gemini API compatibility fix (v1beta → v1)
 - **0.1.3** - License update to AGPL-3.0
 - **0.1.2** - Codebase unification and enhancements
 - **0.1.1** - Security improvements and architecture refactoring

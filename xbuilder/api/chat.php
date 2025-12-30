@@ -57,16 +57,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $message = trim($input['message']);
     $documentContent = $input['document'] ?? null;
-    
+
     if (empty($message)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Message cannot be empty']);
         exit;
     }
-    
+
+    // Log document content for debugging
+    if ($documentContent) {
+        error_log("[XBuilder Chat] Received document: " . strlen($documentContent) . " chars");
+    } else {
+        error_log("[XBuilder Chat] No document content");
+    }
+
     // Store user message
     $conversation->addMessage('user', $message);
-    
+
     // If document content provided, store it
     if ($documentContent) {
         $conversation->setDocumentContent($documentContent, 'uploaded_document');
