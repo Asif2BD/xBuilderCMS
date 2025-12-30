@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-12-30
+
+### Added
+- **Version display in UI**: Current version now visible in all admin pages
+  - Setup wizard: bottom-right corner
+  - Login page: bottom-right corner
+  - Chat interface: bottom-left corner
+- **Automated version bump script**: `bump-version.sh` for easy version management
+  - Interactive prompts for major/minor/patch bumps
+  - Automatically updates VERSION, README.md badges
+  - Creates git commits and tags
+  - Pushes to remote with confirmation
+- **Complete version history**: All 7 releases now documented in README.md
+- **Version tracking in Config.php**: getAppVersion() and getInstalledVersion() methods
+
+### Changed
+- README.md: Enhanced "Versioning & Changelog" section with full history
+- All UI pages now read VERSION file dynamically
+
+### Developer Experience
+- Added `bump-version.sh` script for streamlined version management
+- Version number is now single source of truth (VERSION file)
+- All documentation auto-updates from VERSION file
+
 ## [0.2.0] - 2025-12-30
 
 ### Added
@@ -122,6 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.3.0** - Platform enhancements (version display, automation)
 - **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)
 - **0.1.4** - Gemini API compatibility fix
 - **0.1.3** - License update to AGPL-3.0
