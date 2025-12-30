@@ -133,15 +133,24 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         </div>
         
         <div class="flex items-center gap-3">
-            <button onclick="startNewConversation()" 
+            <button onclick="copyDebugInfo()"
+                    class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
+                    title="Copy debug info to clipboard">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Debug
+            </button>
+
+            <button onclick="startNewConversation()"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 New
             </button>
-            
-            <a href="/xbuilder/logout" 
+
+            <a href="/xbuilder/logout"
                class="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition">
                 Logout
             </a>
@@ -729,6 +738,115 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
             el.style.height = 'auto';
             el.style.height = Math.min(el.scrollHeight, 200) + 'px';
         }
+
+        // Copy debug information to clipboard
+        async function copyDebugInfo() {
+            const debugInfo = {
+                timestamp: new Date().toISOString(),
+                version: '<?php echo $version; ?>',
+                browser: navigator.userAgent,
+                url: window.location.href,
+
+                // Console logs
+                consoleLogs: window.xbuilderLogs || [],
+
+                // Conversation state
+                conversationLength: conversationHistory.length,
+                hasDocument: uploadedDocument !== null,
+                documentLength: uploadedDocument ? uploadedDocument.length : 0,
+                documentPreview: uploadedDocument ? uploadedDocument.substring(0, 200) : 'N/A',
+
+                // Generated HTML status
+                hasGeneratedHtml: generatedHtml !== null,
+                htmlLength: generatedHtml ? generatedHtml.length : 0,
+
+                // Recent messages (last 5)
+                recentMessages: conversationHistory.slice(-5).map(msg => ({
+                    role: msg.role,
+                    contentPreview: msg.content.substring(0, 150)
+                }))
+            };
+
+            const debugText = `XBuilder Debug Information
+Generated: ${debugInfo.timestamp}
+Version: ${debugInfo.version}
+Browser: ${debugInfo.browser}
+URL: ${debugInfo.url}
+
+=== CONVERSATION STATE ===
+Total messages: ${debugInfo.conversationLength}
+Has uploaded document: ${debugInfo.hasDocument}
+Document length: ${debugInfo.documentLength} chars
+Document preview: ${debugInfo.documentPreview}${debugInfo.documentLength > 200 ? '...' : ''}
+
+Has generated HTML: ${debugInfo.hasGeneratedHtml}
+HTML length: ${debugInfo.htmlLength} chars
+
+=== RECENT MESSAGES (Last 5) ===
+${debugInfo.recentMessages.map((msg, i) => `${i+1}. [${msg.role.toUpperCase()}] ${msg.contentPreview}...`).join('\n\n')}
+
+=== CONSOLE LOGS ===
+${debugInfo.consoleLogs.length > 0 ? debugInfo.consoleLogs.join('\n') : 'No console logs captured'}
+
+=== INSTRUCTIONS ===
+Please paste this information when reporting issues to help with debugging.
+`;
+
+            try {
+                await navigator.clipboard.writeText(debugText);
+
+                // Show success notification
+                const btn = event.target.closest('button');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Copied!`;
+                btn.classList.remove('bg-dark-700', 'hover:bg-dark-600');
+                btn.classList.add('bg-green-600');
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('bg-green-600');
+                    btn.classList.add('bg-dark-700', 'hover:bg-dark-600');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy debug info: ' + err.message);
+                console.error('[XBuilder Debug] Copy failed:', err);
+            }
+        }
+
+        // Capture console logs for debugging
+        window.xbuilderLogs = [];
+        const originalLog = console.log;
+        console.log = function(...args) {
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            window.xbuilderLogs.push('[LOG] ' + message);
+            if (window.xbuilderLogs.length > 100) window.xbuilderLogs.shift(); // Keep last 100
+            originalLog.apply(console, args);
+        };
+
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            window.xbuilderLogs.push('[WARN] ' + message);
+            if (window.xbuilderLogs.length > 100) window.xbuilderLogs.shift();
+            originalWarn.apply(console, args);
+        };
+
+        const originalError = console.error;
+        console.error = function(...args) {
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            window.xbuilderLogs.push('[ERROR] ' + message);
+            if (window.xbuilderLogs.length > 100) window.xbuilderLogs.shift();
+            originalError.apply(console, args);
+        };
     </script>
 
     <!-- Version Footer -->
