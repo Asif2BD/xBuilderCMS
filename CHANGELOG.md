@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-12-30
+
+### Fixed
+- **Document upload not working**: AI was not receiving uploaded CV/document content
+  - Installed poppler-utils (pdftotext) for proper PDF text extraction
+  - Added comprehensive logging throughout upload and chat pipeline
+  - Frontend now shows word count and extraction preview
+  - Clear visual feedback: "Document ready - will be sent with your next message"
+  - Console logging helps debug document sending process
+  - Users can now successfully upload CVs and have AI read the content
+
 ## [0.3.2] - 2025-12-30
 
 ### Fixed
@@ -163,6 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
 - **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
 - **0.3.1** - Incomplete fix (used deprecated Gemini 1.5 model)
 - **0.3.0** - Platform enhancements (version display, automation)
