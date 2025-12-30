@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2025-12-30
+
+### Fixed
+- **Uploaded documents not reaching AI**: Critical bug where PDFs were cleared if extraction < 100 chars
+  - Root cause: Over-aggressive client-side validation in v0.4.1
+  - Documents with incomplete extraction were set to `null` before sending to AI
+  - Changed: Now ALWAYS sends extracted content to AI, even if imperfect
+  - Lowered threshold: 100 chars → 50 chars (more lenient)
+  - Adds note for AI: "[Note: PDF extraction may be incomplete...]"
+  - Let AI decide if content is usable vs discarding client-side
+  - Users see: "Sending to AI anyway..." instead of complete rejection
+- **Version badge positioning**: Fixed floating version number in chat interface
+  - Changed to `position: fixed !important` with `z-index: 9999`
+  - Added `pointer-events: none` to prevent interaction blocking
+  - Now properly stays in bottom-left corner
+- **Added comprehensive logging**: Debug logs throughout document and LinkedIn workflows
+  - Track document flow: upload → chat API → AI
+  - Track LinkedIn fetch: URL validation → HTML fetch → parsing
+  - Helps diagnose issues without server access
+
 ## [0.4.1] - 2025-12-30
 
 ### Fixed
@@ -217,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.4.2** - Critical bug fix (documents not reaching AI, version badge position)
 - **0.4.1** - Critical bug fix (PDF extraction returning corrupted data)
 - **0.4.0** - New feature (LinkedIn profile fetching, deployment UX improvements)
 - **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
