@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2025-12-30
+
+### Improved
+- **Enhanced AI prompting for beautiful websites**: Major system prompt improvements
+  - Added personality-first discovery approach
+  - Design decision matrix: profession → design style mapping
+  - Formula for creating unique, personal designs
+  - 4 proven design recipes with exact specifications (Tech Developer, Creative Designer, Startup Founder, Minimalist Professional)
+  - Conversation patterns that work (no analysis paralysis)
+  - Based on analysis of successful website examples (iamshifat.com)
+  - AI now makes confident design decisions instead of asking endless questions
+  - Each generated site feels custom-crafted, not cookie-cutter
+
+### Fixed
+- Debug button error: "Cannot read properties of undefined (reading 'target')"
+  - Added event parameter to onclick handler and function signature
+  - Debug button now correctly copies debug info to clipboard
+
 ## [0.6.1] - 2025-12-30
 
 ### Added
