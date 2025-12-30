@@ -636,17 +636,25 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                     // Check if content looks valid (not mostly garbage/binary)
                     const isPDF = file.name.toLowerCase().endsWith('.pdf');
                     const hasValidText = data.content && /[a-zA-Z]{3,}/.test(data.content);
-                    const suspiciousContent = data.length < 100 || !hasValidText;
+                    const suspiciousContent = data.length < 50 || !hasValidText;
 
+                    // Always keep the document for AI, but warn if extraction looks poor
                     if (isPDF && suspiciousContent) {
                         // PDF extraction might have failed
-                        status.innerHTML = `<span class="text-yellow-400">⚠️ ${file.name} uploaded, but text extraction may have failed (${wordCount} words). Try DOCX format for better results.</span>`;
+                        status.innerHTML = `<span class="text-yellow-400">⚠️ ${file.name} uploaded, but text extraction may have failed (${wordCount} words). Sending to AI anyway...</span>`;
                         console.warn('[XBuilder] PDF extraction suspicious - content length:', data.length);
 
-                        // Don't add to conversation if extraction clearly failed
-                        addMessageToUI('user', `📄 Uploaded: ${file.name} (extraction may have failed)`);
-                        addMessageToUI('assistant', `⚠️ I had trouble extracting text from that PDF. For best results, please upload your CV as a **.docx** or **.txt** file instead. Some PDFs are encrypted or use special formatting that makes extraction difficult.`);
-                        uploadedDocument = null; // Clear the bad content
+                        // Add message about upload with warning
+                        addMessageToUI('user', `📄 Uploaded: ${file.name} (extraction may be incomplete)`);
+
+                        // Add note to help AI understand the situation
+                        const contentWithNote = `[Note: PDF text extraction may be incomplete or contain errors. User's CV file: ${file.name}]\n\n` + data.content;
+                        uploadedDocument = contentWithNote;
+
+                        conversationHistory.push({
+                            role: 'user',
+                            content: `I've uploaded my document: ${file.name}. Note: Text extraction from this PDF may be incomplete, but here's what was extracted:\n\n${data.content.substring(0, 500)}...`
+                        });
                     } else {
                         // Successful extraction
                         status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
