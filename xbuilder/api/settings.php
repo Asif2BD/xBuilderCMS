@@ -77,18 +77,40 @@ switch ($action) {
                 'name' => 'OpenAI',
                 'has_key' => $security->hasApiKey('openai'),
                 'models' => [
-                    'o3' => 'O3 (Latest Reasoning - Jan 2025)',
-                    'o3-mini' => 'O3 Mini (Fast Reasoning)',
-                    'o3-pro' => 'O3 Pro (Advanced Reasoning)',
-                    'o4-mini' => 'O4 Mini (Newest)',
+                    // GPT-5.2 (Latest - December 2025)
+                    'gpt-5.2' => 'GPT-5.2 (Latest Flagship)',
+                    'gpt-5.2-2025-12-11' => 'GPT-5.2 (Dec 2025)',
+                    'gpt-5.2-chat-latest' => 'GPT-5.2 Chat Instant',
+                    'gpt-5.2-pro' => 'GPT-5.2 Pro',
+                    // GPT-5.1 (November 2025)
+                    'gpt-5.1' => 'GPT-5.1',
+                    'gpt-5.1-2025-11-13' => 'GPT-5.1 (Nov 2025)',
+                    'gpt-5.1-chat-latest' => 'GPT-5.1 Chat Instant',
+                    'gpt-5.1-codex' => 'GPT-5.1 Codex (Coding)',
+                    'gpt-5.1-codex-mini' => 'GPT-5.1 Codex Mini',
+                    // GPT-5 (August 2025)
+                    'gpt-5' => 'GPT-5',
+                    'gpt-5-2025-08-07' => 'GPT-5 (Aug 2025)',
+                    'gpt-5-mini' => 'GPT-5 Mini',
+                    'gpt-5-mini-2025-08-07' => 'GPT-5 Mini (Aug 2025)',
+                    'gpt-5-nano' => 'GPT-5 Nano',
+                    'gpt-5-nano-2025-08-07' => 'GPT-5 Nano (Aug 2025)',
+                    'gpt-5-chat-latest' => 'GPT-5 Chat',
+                    // O-series Reasoning
+                    'o3' => 'O3 (Reasoning)',
+                    'o3-mini' => 'O3 Mini',
+                    'o3-pro' => 'O3 Pro',
+                    'o4-mini' => 'O4 Mini',
+                    'o1' => 'O1',
+                    // GPT-4.1 family
                     'gpt-4.1' => 'GPT-4.1 (1M context)',
                     'gpt-4.1-mini' => 'GPT-4.1 Mini',
-                    'gpt-4.1-nano' => 'GPT-4.1 Nano (Fastest)',
+                    'gpt-4.1-nano' => 'GPT-4.1 Nano',
+                    // GPT-4 family
                     'gpt-4o' => 'GPT-4o',
                     'gpt-4o-mini' => 'GPT-4o Mini',
                     'gpt-4-turbo' => 'GPT-4 Turbo',
-                    'gpt-4' => 'GPT-4',
-                    'o1' => 'O1 (Previous Reasoning)'
+                    'gpt-4' => 'GPT-4'
                 ]
             ]
         ];

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2025-12-30
+
+### Fixed
+- **CRITICAL: Added missing GPT-5 family models**:
+  - **GPT-5.2** (Latest - Dec 2025): gpt-5.2, gpt-5.2-2025-12-11, gpt-5.2-chat-latest, gpt-5.2-pro
+  - **GPT-5.1** (Nov 2025): gpt-5.1, gpt-5.1-2025-11-13, gpt-5.1-chat-latest, gpt-5.1-codex, gpt-5.1-codex-mini
+  - **GPT-5** (Aug 2025): gpt-5, gpt-5-2025-08-07, gpt-5-mini, gpt-5-nano, gpt-5-chat-latest
+  - Total: 32 OpenAI models now available (was missing 16 GPT-5 models)
+  - **Apology**: v0.7.1 incorrectly stated "GPT-5 does not exist" - this was completely wrong
+  - All GPT-5 models released throughout 2025 are now included
+
+### Note
+- User was correct - I made a mistake not finding GPT-5 models
+- OpenAI platform.openai.com/docs was temporarily blocking requests
+- All model IDs verified from official OpenAI documentation
+
 ## [0.7.2] - 2025-12-30
 
 ### Added
@@ -35,10 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated default models to latest stable versions
 
 ### Note
-- GPT-5 does not exist yet (user was mistaken)
+- **CORRECTION**: Previous version incorrectly stated GPT-5 doesn't exist - it does!
 - Claude Opus 4.5 is the most intelligent Claude model
 - Gemini 3 Pro is the latest Gemini (released Nov 2025)
 - All model names verified against official API documentation
+- Missing GPT-5 family fixed in v0.7.3
 
 ## [0.7.0] - 2025-12-30
 
