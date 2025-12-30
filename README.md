@@ -1,6 +1,6 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
@@ -8,7 +8,7 @@
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
 
-> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.2.0** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.3.0** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -198,9 +198,15 @@ XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
 - **MINOR** version for new features (backward compatible)
 - **PATCH** version for bug fixes (backward compatible)
 
-**Current Version: 0.2.0**
+**Current Version: 0.3.0**
 
 ### Version History
+
+**v0.3.0** (2025-12-30) - Platform Enhancements
+- ✅ Version display in all UI pages (Setup, Login, Chat)
+- ✅ Automated version bump script (bump-version.sh)
+- ✅ Complete version history in README
+- ✅ Enhanced documentation and changelog system
 
 **v0.2.0** (2025-12-30) - Multi-Server Support
 - ✅ Full compatibility with Apache, Nginx, and OpenLiteSpeed
