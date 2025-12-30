@@ -3,6 +3,8 @@
 # Storage (sensitive data)
 xbuilder/storage/*
 !xbuilder/storage/.gitkeep
+xbuilder/storage/backups/
+xbuilder/storage/security.log
 
 # Generated site
 site/*

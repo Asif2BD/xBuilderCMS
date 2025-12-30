@@ -211,6 +211,15 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 View Public Website
             </a>
 
+            <!-- Update Available Button (shows when update is available) -->
+            <button onclick="showUpdateModal()" id="updateBtn"
+                    class="hidden px-4 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition flex items-center gap-2 font-medium animate-pulse">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <span id="updateBtnText">Update Available</span>
+            </button>
+
             <button onclick="copyDebugInfo()"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
                     title="Copy debug info to clipboard">
@@ -226,6 +235,16 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 New
+            </button>
+
+            <button onclick="showSettingsModal()"
+                    class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
+                    title="AI Settings">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Settings
             </button>
 
             <a href="/xbuilder/logout"
@@ -1129,5 +1148,457 @@ Please paste this information when reporting issues to help with debugging.
          class="text-xs text-gray-500 bg-dark-800 px-3 py-2 rounded-lg border border-dark-600">
         XBuilder v<?php echo htmlspecialchars($version); ?>
     </div>
+
+    <!-- Update Modal -->
+    <div id="updateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+        <div class="bg-dark-800 rounded-xl shadow-2xl border border-dark-600 max-w-2xl w-full mx-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <h2 class="text-xl font-semibold text-white">System Update</h2>
+                </div>
+                <button onclick="closeUpdateModal()" class="text-gray-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 max-h-96 overflow-y-auto">
+                <div id="updateContent">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-dark-600 flex items-center justify-end gap-3">
+                <button onclick="closeUpdateModal()" class="px-4 py-2 text-sm bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition">
+                    Cancel
+                </button>
+                <button onclick="performUpdate()" id="updateNowBtn" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium">
+                    Update Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+        <div class="bg-dark-800 rounded-xl shadow-2xl border border-dark-600 max-w-3xl w-full mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-dark-600 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <h2 class="text-xl font-semibold text-white">AI Settings</h2>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 overflow-y-auto flex-1">
+                <div id="settingsContent">
+                    <div class="flex items-center justify-center py-12">
+                        <div class="loading-spinner" style="width: 40px; height: 40px; border-width: 3px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-dark-600 flex items-center justify-end gap-3 flex-shrink-0">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update management
+        let currentUpdateInfo = null;
+        // Settings management
+        let currentSettings = null;
+
+        // Check for updates on page load
+        async function checkForUpdates() {
+            try {
+                const response = await fetch('/xbuilder/api/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'check' })
+                });
+
+                const data = await response.json();
+
+                if (data.available) {
+                    currentUpdateInfo = data;
+                    const updateBtn = document.getElementById('updateBtn');
+                    const updateBtnText = document.getElementById('updateBtnText');
+
+                    if (updateBtn && updateBtnText) {
+                        updateBtn.classList.remove('hidden');
+                        updateBtnText.textContent = `Update to v${data.latest_version}`;
+                    }
+
+                    console.log('[XBuilder Update] New version available:', data.latest_version);
+                }
+            } catch (error) {
+                console.error('[XBuilder Update] Failed to check for updates:', error);
+            }
+        }
+
+        // Show update modal
+        function showUpdateModal() {
+            if (!currentUpdateInfo) return;
+
+            const modal = document.getElementById('updateModal');
+            const content = document.getElementById('updateContent');
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-400">Current Version</p>
+                            <p class="text-xl font-semibold text-white">v${currentUpdateInfo.current_version}</p>
+                        </div>
+                        <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm text-gray-400">New Version</p>
+                            <p class="text-xl font-semibold text-emerald-500">v${currentUpdateInfo.latest_version}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-900 rounded-lg p-4 border border-dark-600">
+                        <h3 class="font-semibold text-white mb-2">What's New</h3>
+                        <div class="text-sm text-gray-300 prose prose-invert max-w-none" style="white-space: pre-wrap;">${escapeHtml(currentUpdateInfo.changelog || 'No changelog available.')}</div>
+                    </div>
+
+                    <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                        <div class="flex gap-3">
+                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-blue-300">
+                                <p class="font-semibold mb-1">Safety Features:</p>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Automatic backup before update</li>
+                                    <li>Your website and data are preserved</li>
+                                    <li>Rollback available if needed</li>
+                                    <li>Process takes 30-60 seconds</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        // Close update modal
+        function closeUpdateModal() {
+            const modal = document.getElementById('updateModal');
+            modal.classList.add('hidden');
+        }
+
+        // Perform update
+        async function performUpdate() {
+            const updateNowBtn = document.getElementById('updateNowBtn');
+            const content = document.getElementById('updateContent');
+
+            // Disable button and show progress
+            updateNowBtn.disabled = true;
+            updateNowBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="loading-spinner mx-auto mb-4" style="width: 40px; height: 40px; border-width: 3px;"></div>
+                    <p class="text-lg font-semibold text-white mb-2">Updating XBuilder...</p>
+                    <p class="text-sm text-gray-400">Please wait, this may take up to 60 seconds</p>
+                    <div class="mt-4 space-y-2 text-sm text-gray-500">
+                        <p>✓ Creating backup...</p>
+                        <p>✓ Downloading update...</p>
+                        <p>⏳ Installing files...</p>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/xbuilder/api/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'perform' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Update Successful!</h3>
+                            <p class="text-gray-400 mb-4">XBuilder has been updated to version ${data.new_version}</p>
+                            <div class="bg-dark-900 rounded-lg p-4 border border-dark-600 text-sm text-left">
+                                <p class="text-gray-400"><span class="text-white font-semibold">Old Version:</span> v${data.old_version}</p>
+                                <p class="text-gray-400"><span class="text-white font-semibold">New Version:</span> v${data.new_version}</p>
+                                <p class="text-gray-400 mt-2"><span class="text-white font-semibold">Backup:</span> ${data.backup_file}</p>
+                            </div>
+                            <button onclick="window.location.reload()" class="mt-6 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium">
+                                Reload Page
+                            </button>
+                        </div>
+                    `;
+                    updateNowBtn.style.display = 'none';
+                } else {
+                    throw new Error(data.error || 'Update failed');
+                }
+
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Update Failed</h3>
+                        <p class="text-gray-400 mb-4">${escapeHtml(error.message)}</p>
+                        <p class="text-sm text-gray-500">Your system has been rolled back to the previous version.</p>
+                        <button onclick="closeUpdateModal(); location.reload();" class="mt-6 px-6 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition">
+                            Close
+                        </button>
+                    </div>
+                `;
+                updateNowBtn.style.display = 'none';
+            }
+        }
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Settings Management
+        async function showSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const content = document.getElementById('settingsContent');
+
+            modal.classList.remove('hidden');
+
+            // Load settings
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_current' })
+                });
+
+                const data = await response.json();
+                currentSettings = data;
+
+                renderSettings(data);
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="text-center py-8 text-red-400">
+                        Failed to load settings. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.add('hidden');
+        }
+
+        function renderSettings(data) {
+            const content = document.getElementById('settingsContent');
+
+            const providersHtml = Object.keys(data.providers).map(key => {
+                const provider = data.providers[key];
+                const isCurrent = key === data.current_provider;
+                const models = provider.models;
+
+                return `
+                    <div class="bg-dark-900 rounded-lg border ${isCurrent ? 'border-purple-500' : 'border-dark-600'} overflow-hidden">
+                        <div class="p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-3">
+                                    <h3 class="font-semibold text-white text-lg">${provider.name}</h3>
+                                    ${isCurrent ? '<span class="px-2 py-1 text-xs bg-purple-600 text-white rounded">Active</span>' : ''}
+                                    ${provider.has_key ? '<span class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-400 rounded border border-emerald-600">API Key Set</span>' : '<span class="px-2 py-1 text-xs bg-orange-600/20 text-orange-400 rounded border border-orange-600">No API Key</span>'}
+                                </div>
+                                ${!isCurrent && provider.has_key ? `<button onclick="switchProvider('${key}')" class="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded transition">Use This</button>` : ''}
+                            </div>
+
+                            ${isCurrent ? `
+                                <div class="mb-3">
+                                    <label class="block text-sm text-gray-400 mb-2">Model:</label>
+                                    <select onchange="switchModel(this.value)" class="w-full bg-dark-700 border border-dark-600 rounded px-3 py-2 text-white">
+                                        ${Object.keys(models).map(modelKey => `
+                                            <option value="${modelKey}" ${modelKey === data.current_model ? 'selected' : ''}>${models[modelKey]}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            ` : ''}
+
+                            <div class="space-y-2">
+                                <label class="block text-sm text-gray-400">API Key:</label>
+                                <div class="flex gap-2">
+                                    <input type="password" id="apikey_${key}" placeholder="${provider.has_key ? '••••••••••••••••' : 'Enter API key'}" class="flex-1 bg-dark-700 border border-dark-600 rounded px-3 py-2 text-white text-sm">
+                                    <button onclick="saveApiKey('${key}')" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded transition">
+                                        ${provider.has_key ? 'Update' : 'Save'}
+                                    </button>
+                                    ${provider.has_key ? `<button onclick="deleteApiKey('${key}')" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition">Delete</button>` : ''}
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    ${key === 'gemini' ? 'Get from: https://aistudio.google.com/app/apikey' : ''}
+                                    ${key === 'claude' ? 'Get from: https://console.anthropic.com/settings/keys' : ''}
+                                    ${key === 'openai' ? 'Get from: https://platform.openai.com/api-keys' : ''}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                        <div class="flex gap-3">
+                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-blue-300">
+                                <p class="font-semibold mb-1">Manage Your AI Providers</p>
+                                <p>Switch between different AI providers and models. Add multiple API keys to avoid quota limits.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${providersHtml}
+                </div>
+            `;
+        }
+
+        async function switchProvider(provider) {
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'switch_provider', provider })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload settings
+                    showSettingsModal();
+                    // Show success message
+                    alert('AI provider switched successfully! Your next chat will use ' + provider + '.');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Failed to switch provider');
+            }
+        }
+
+        async function switchModel(model) {
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'switch_model', model })
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Failed to switch model');
+            }
+        }
+
+        async function saveApiKey(provider) {
+            const input = document.getElementById('apikey_' + provider);
+            const apiKey = input.value.trim();
+
+            if (!apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add_api_key', provider, api_key: apiKey })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    input.value = '';
+                    showSettingsModal(); // Reload
+                    alert('API key saved successfully!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Failed to save API key');
+            }
+        }
+
+        async function deleteApiKey(provider) {
+            if (!confirm(`Are you sure you want to delete the API key for ${provider}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/xbuilder/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_api_key', provider })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSettingsModal(); // Reload
+                    alert('API key deleted successfully');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Failed to delete API key');
+            }
+        }
+
+        // Check for updates on page load
+        setTimeout(() => {
+            checkForUpdates();
+        }, 2000); // Wait 2 seconds after page load
+    </script>
 </body>
 </html>
