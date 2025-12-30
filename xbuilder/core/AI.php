@@ -255,6 +255,30 @@ Create DIFFERENT aesthetics based on context:
 8. NEVER use Lorem ipsum - create realistic placeholder content
 9. Use emoji favicon trick for quick personalization
 
+## THE XBUILDER INTERFACE (CRITICAL)
+
+**IMPORTANT**: You are integrated into the XBuilder CMS, NOT a standalone chatbot.
+
+When you generate code using the ```xbuilder-html format:
+
+1. **Preview Tab**: The website automatically appears in a live preview iframe
+2. **Code Tab**: The HTML source code is displayed for review
+3. **Publish Button**: A "Publish to Live Site" button appears automatically
+4. **Deployment**: When clicked, the site is deployed to the user's root domain
+
+**NEVER tell users to:**
+- ❌ "Copy the code block and paste into a text editor"
+- ❌ "Save as index.html and open in browser"
+- ❌ "Deploy using Netlify, Vercel, etc."
+
+**INSTEAD, say:**
+- ✅ "Check the Preview tab to see your website!"
+- ✅ "The website is ready - check it out in the Preview tab!"
+- ✅ "When you're happy with it, click 'Publish to Live Site' to deploy!"
+- ✅ "Your code is ready in the Code tab if you want to review it"
+
+**The XBuilder interface handles everything automatically.** Your job is to generate great code and guide the user through refinements.
+
 ## STARTING THE CONVERSATION
 
 When a user first arrives, greet them warmly and ask what kind of website they'd like to create. If they mention having a CV or LinkedIn profile, encourage them to share it so you can create something personalized.
@@ -273,10 +297,18 @@ PROMPT;
             ];
         }
 
+        // Log document content status
+        if ($documentContent) {
+            error_log("[XBuilder AI] Document provided: " . strlen($documentContent) . " chars, preview: " . substr($documentContent, 0, 100));
+        } else {
+            error_log("[XBuilder AI] No document content provided to AI");
+        }
+
         // Add document content to the context if provided
         $systemPrompt = $this->getSystemPrompt();
         if ($documentContent) {
             $systemPrompt .= "\n\n## User's Document Content\n\nThe user has uploaded a document. Here is the extracted content:\n\n" . $documentContent;
+            error_log("[XBuilder AI] Added document to system prompt, total prompt length: " . strlen($systemPrompt));
         }
 
         try {
@@ -339,10 +371,18 @@ PROMPT;
 
         $content = $data['content'][0]['text'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from Claude response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from Claude response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 
@@ -395,10 +435,18 @@ PROMPT;
 
         $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from Gemini response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from Gemini response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 
@@ -444,10 +492,18 @@ PROMPT;
 
         $content = $data['choices'][0]['message']['content'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from OpenAI response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from OpenAI response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 
@@ -456,21 +512,44 @@ PROMPT;
      */
     private function extractHtml(string $content): ?string
     {
-        // Look for ```xbuilder-html ... ``` blocks first
-        if (preg_match('/```xbuilder-html\s*([\s\S]*?)```/i', $content, $matches)) {
+        error_log("[XBuilder AI] Attempting to extract HTML from response (length: " . strlen($content) . ")");
+
+        // Look for ```xbuilder-html ... ``` blocks (most specific)
+        // Handle both with and without newline after marker
+        if (preg_match('/```xbuilder-html\s*\n?([\s\S]*?)```/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found xbuilder-html code block");
             return $this->cleanHtml(trim($matches[1]));
         }
 
         // Fallback: look for ```html ... ``` blocks
-        if (preg_match('/```html\s*([\s\S]*?)```/i', $content, $matches)) {
+        if (preg_match('/```html\s*\n?([\s\S]*?)```/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found html code block");
             return $this->cleanHtml(trim($matches[1]));
         }
 
-        // Fallback: look for <!DOCTYPE html> ... </html>
-        if (preg_match('/(<!DOCTYPE html>[\s\S]*<\/html>)/i', $content, $matches)) {
+        // Fallback: look for <!DOCTYPE html> ... </html> anywhere in content
+        // This catches cases where code block markers are malformed
+        if (preg_match('/(<!DOCTYPE html>[\s\S]*?<\/html>)/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found DOCTYPE html pattern (no code block)");
             return $this->cleanHtml(trim($matches[1]));
         }
 
+        // Last resort: look for incomplete HTML (starts with <!DOCTYPE but no closing)
+        // This handles truncated responses
+        if (preg_match('/(<!DOCTYPE html>[\s\S]+)/i', $content, $matches)) {
+            error_log("[XBuilder AI] Found incomplete DOCTYPE html (response may be truncated)");
+            $html = trim($matches[1]);
+            // Add closing tags if missing
+            if (!str_contains($html, '</html>')) {
+                $html .= "\n</body>\n</html>";
+            }
+            if (!str_contains($html, '</body>')) {
+                $html = str_replace('</html>', "</body>\n</html>", $html);
+            }
+            return $this->cleanHtml($html);
+        }
+
+        error_log("[XBuilder AI] No HTML found in response");
         return null;
     }
 
