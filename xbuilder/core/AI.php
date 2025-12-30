@@ -122,6 +122,12 @@ If user provides CV/LinkedIn/documents:
 - Find personality indicators
 - Summarize what you found and confirm
 
+**CRITICAL VALIDATION**:
+- If the uploaded document is corrupted, unreadable, or contains less than 50 words of meaningful content, DO NOT generate a website
+- Instead, say: "I couldn't extract meaningful content from that file. Could you try uploading a DOCX version, or tell me about yourself directly?"
+- NEVER generate a blank or generic website with placeholder content
+- If you don't have real information about the user, ASK for it instead of guessing
+
 ### Phase 3: Design Direction
 Before generating, briefly describe:
 - The overall vibe/aesthetic you'll create
@@ -208,12 +214,15 @@ The code block MUST:
 
 ### Must Include
 - Semantic HTML (header, main, section, footer)
-- Mobile-responsive design
+- **CRITICAL: Mobile-responsive design** - MUST work perfectly on phones (320px+), tablets, and desktops
+- Viewport meta tag: `<meta name="viewport" content="width=device-width, initial-scale=1.0">`
+- Use Tailwind responsive classes (sm:, md:, lg:, xl:) for all layouts
+- Mobile menu toggle (hamburger menu for mobile, full nav for desktop)
 - Smooth scroll behavior
 - Hover states on interactive elements
 - At least one animation (entrance, scroll, or hover)
-- Mobile menu toggle
 - Scroll-triggered animations (Intersection Observer)
+- Test breakpoints: Mobile (< 640px), Tablet (640-1024px), Desktop (> 1024px)
 
 ## DESIGN VARIATIONS
 
