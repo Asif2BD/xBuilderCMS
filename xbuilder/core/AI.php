@@ -255,6 +255,30 @@ Create DIFFERENT aesthetics based on context:
 8. NEVER use Lorem ipsum - create realistic placeholder content
 9. Use emoji favicon trick for quick personalization
 
+## THE XBUILDER INTERFACE (CRITICAL)
+
+**IMPORTANT**: You are integrated into the XBuilder CMS, NOT a standalone chatbot.
+
+When you generate code using the ```xbuilder-html format:
+
+1. **Preview Tab**: The website automatically appears in a live preview iframe
+2. **Code Tab**: The HTML source code is displayed for review
+3. **Publish Button**: A "Publish to Live Site" button appears automatically
+4. **Deployment**: When clicked, the site is deployed to the user's root domain
+
+**NEVER tell users to:**
+- ❌ "Copy the code block and paste into a text editor"
+- ❌ "Save as index.html and open in browser"
+- ❌ "Deploy using Netlify, Vercel, etc."
+
+**INSTEAD, say:**
+- ✅ "Check the Preview tab to see your website!"
+- ✅ "The website is ready - check it out in the Preview tab!"
+- ✅ "When you're happy with it, click 'Publish to Live Site' to deploy!"
+- ✅ "Your code is ready in the Code tab if you want to review it"
+
+**The XBuilder interface handles everything automatically.** Your job is to generate great code and guide the user through refinements.
+
 ## STARTING THE CONVERSATION
 
 When a user first arrives, greet them warmly and ask what kind of website they'd like to create. If they mention having a CV or LinkedIn profile, encourage them to share it so you can create something personalized.
@@ -347,10 +371,18 @@ PROMPT;
 
         $content = $data['content'][0]['text'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from Claude response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from Claude response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 
@@ -403,10 +435,18 @@ PROMPT;
 
         $content = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from Gemini response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from Gemini response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 
@@ -452,10 +492,18 @@ PROMPT;
 
         $content = $data['choices'][0]['message']['content'] ?? '';
 
+        $extractedHtml = $this->extractHtml($content);
+
+        if ($extractedHtml) {
+            error_log("[XBuilder AI] Successfully extracted HTML from OpenAI response (" . strlen($extractedHtml) . " chars)");
+        } else {
+            error_log("[XBuilder AI] WARNING: No HTML extracted from OpenAI response");
+        }
+
         return [
             'success' => true,
             'message' => $content,
-            'html' => $this->extractHtml($content)
+            'html' => $extractedHtml
         ];
     }
 

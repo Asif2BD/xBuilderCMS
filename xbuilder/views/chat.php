@@ -415,12 +415,16 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                     // Add AI response to UI
                     addMessageToUI('assistant', data.message);
                     conversationHistory.push({ role: 'assistant', content: data.message });
-                    
+
                     // Check if HTML was generated
                     if (data.html) {
+                        console.log('[XBuilder] HTML received from server (' + data.html.length + ' chars)');
                         generatedHtml = data.html;
                         showPreview(generatedHtml);
                         document.getElementById('publishBtn').classList.remove('hidden');
+                        console.log('[XBuilder] Preview updated and publish button shown');
+                    } else {
+                        console.warn('[XBuilder] No HTML in server response');
                     }
                 } else {
                     addMessageToUI('assistant', '⚠️ ' + (data.error || 'Something went wrong. Please try again.'));
