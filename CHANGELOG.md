@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-12-30
+
+### Fixed
+- **PDF text extraction returning corrupted data**: Critical bug causing AI to receive garbage instead of readable text
+  - Changed `exec()` to `shell_exec()` for proper pdftotext output capture
+  - Added `-enc UTF-8` flag for better character encoding
+  - Try extraction with and without `-layout` flag (some PDFs work better without)
+  - Validate extracted text (minimum length, no error messages, readable characters)
+  - Improved fallback method to skip binary data
+  - Added comprehensive logging at each extraction stage
+  - Client-side validation detects suspicious content (< 100 chars, no text)
+  - Warn users if PDF extraction fails with suggestion to use DOCX
+  - Upload area now shows: "DOCX recommended for CVs"
+  - Auto-clear bad content instead of sending garbage to AI
+  - Better error messages explaining what to do
+
 ## [0.4.0] - 2025-12-30
 
 ### Added
@@ -201,6 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.4.1** - Critical bug fix (PDF extraction returning corrupted data)
 - **0.4.0** - New feature (LinkedIn profile fetching, deployment UX improvements)
 - **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
 - **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
