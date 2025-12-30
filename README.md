@@ -1,6 +1,6 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
-[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
@@ -8,7 +8,7 @@
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
 
-> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.3.3** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.4.1** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -198,9 +198,23 @@ XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
 - **MINOR** version for new features (backward compatible)
 - **PATCH** version for bug fixes (backward compatible)
 
-**Current Version: 0.3.3**
+**Current Version: 0.4.1**
 
 ### Version History
+
+**v0.4.1** (2025-12-30) - PDF Extraction Bug Fix
+- ✅ Fixed critical bug: PDFs returning corrupted/binary data to AI
+- ✅ Improved pdftotext execution with UTF-8 encoding
+- ✅ Client-side validation detects failed extractions
+- ✅ Recommends DOCX format for better results
+- ✅ Comprehensive extraction logging
+
+**v0.4.0** (2025-12-30) - LinkedIn Integration & UX Improvements
+- ✅ LinkedIn profile fetching - paste URL to auto-extract profile data
+- ✅ No API key required - works with public LinkedIn profiles
+- ✅ Improved deployment clarity - "Publish to Live Site" button
+- ✅ Clear success messaging shows root domain URL
+- ✅ Fixed version display bug in UI
 
 **v0.3.3** (2025-12-30) - Document Upload Fix
 - ✅ Fixed PDF/CV upload - AI now receives document content

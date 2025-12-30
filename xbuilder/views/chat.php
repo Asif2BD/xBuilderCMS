@@ -1,7 +1,7 @@
 <?php
 // Get XBuilder version
 $versionFile = dirname(__DIR__, 2) . '/VERSION';
-$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.2.0';
+$version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '0.4.1';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -166,7 +166,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                         <p class="text-sm text-gray-400">
                             Drop your CV/document here or <span class="text-indigo-400">click to browse</span>
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, TXT supported</p>
+                        <p class="text-xs text-gray-500 mt-1">DOCX, TXT, PDF, DOC supported • <span class="text-indigo-400">DOCX recommended for CVs</span></p>
                     </label>
                 </div>
                 <div id="uploadStatus" class="hidden mt-2 text-sm"></div>
@@ -220,11 +220,11 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 <div class="flex-1"></div>
                 
                 <button onclick="publishSite()" id="publishBtn"
-                        class="hidden m-2 px-4 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded-lg transition flex items-center gap-2">
+                        class="hidden m-2 px-4 py-2 text-sm bg-green-600 hover:bg-green-700 rounded-lg transition flex items-center gap-2 font-medium">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    Publish
+                    <span>Publish to Live Site</span>
                 </button>
             </div>
             
@@ -305,24 +305,83 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
         async function sendMessage() {
             const input = document.getElementById('userInput');
             const message = input.value.trim();
-            
+
             if (!message || isLoading) return;
-            
+
             // Add user message to UI
             addMessageToUI('user', message);
             conversationHistory.push({ role: 'user', content: message });
-            
+
             // Clear input
             input.value = '';
             autoResize(input);
-            
+
+            // Check if message contains LinkedIn URL
+            const linkedinMatch = message.match(/https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[^\s]+/i);
+            let linkedinData = null;
+
+            if (linkedinMatch) {
+                const linkedinUrl = linkedinMatch[0];
+                console.log('[XBuilder] LinkedIn URL detected:', linkedinUrl);
+
+                // Show status that we're fetching LinkedIn
+                showTypingIndicator();
+                isLoading = true;
+
+                // Add status message
+                const statusMsg = addMessageToUI('assistant', '🔍 Fetching LinkedIn profile...', false);
+
+                try {
+                    const linkedinResponse = await fetch('/xbuilder/api/linkedin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: linkedinUrl })
+                    });
+
+                    const linkedinResult = await linkedinResponse.json();
+
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+
+                    if (linkedinResult.success) {
+                        linkedinData = linkedinResult.content;
+                        console.log('[XBuilder] LinkedIn profile fetched:', linkedinResult.structured.name);
+                        addMessageToUI('assistant', `✓ Got it! I've fetched your LinkedIn profile for **${linkedinResult.structured.name}**. Creating your website now...`);
+                    } else {
+                        console.warn('[XBuilder] LinkedIn fetch failed:', linkedinResult.error);
+                        addMessageToUI('assistant', `⚠️ I couldn't access that LinkedIn profile (it may be private). You can upload your CV instead, or tell me about yourself!`);
+                        hideTypingIndicator();
+                        isLoading = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('[XBuilder] LinkedIn fetch error:', error);
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+                    addMessageToUI('assistant', `⚠️ Couldn't fetch LinkedIn profile. You can upload your CV or tell me about yourself instead!`);
+                    hideTypingIndicator();
+                    isLoading = false;
+                    return;
+                }
+            }
+
             // Show typing indicator
             showTypingIndicator();
             isLoading = true;
 
+            // Combine uploaded document and LinkedIn data
+            let documentToSend = uploadedDocument;
+            if (linkedinData) {
+                documentToSend = linkedinData + (uploadedDocument ? '\n\n---\n\n' + uploadedDocument : '');
+            }
+
             // Log if sending document
-            if (uploadedDocument) {
-                console.log('[XBuilder] Sending message WITH document:', uploadedDocument.length, 'chars');
+            if (documentToSend) {
+                console.log('[XBuilder] Sending message WITH document:', documentToSend.length, 'chars');
             } else {
                 console.log('[XBuilder] Sending message WITHOUT document');
             }
@@ -334,7 +393,7 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                     body: JSON.stringify({
                         message: message,
                         history: conversationHistory.slice(0, -1), // Don't include the message we just added
-                        document: uploadedDocument
+                        document: documentToSend
                     })
                 });
                 
@@ -483,27 +542,30 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 const data = await response.json();
                 
                 if (data.success) {
-                    btn.innerHTML = '✓ Published!';
+                    btn.innerHTML = '✓ Published to Live Site!';
                     btn.classList.remove('bg-green-600', 'hover:bg-green-700');
                     btn.classList.add('bg-emerald-600');
-                    
-                    // Show success message
-                    addMessageToUI('assistant', `🎉 **Your website is live!**\n\nVisit it at: [${window.location.origin}](${window.location.origin})\n\nYou can continue chatting to make changes, or close this tab.`);
-                    
+
+                    // Get the root domain URL (without /xbuilder/ path)
+                    const rootUrl = window.location.origin;
+
+                    // Show success message with clear instructions
+                    addMessageToUI('assistant', `🎉 **Your website is now LIVE!**\n\n📍 **Live URL**: [${rootUrl}](${rootUrl}) (open in new tab)\n\n✅ **Published to**: Root domain (\`/site/index.html\`)\n🔧 **Admin Panel**: [${rootUrl}/xbuilder/](${rootUrl}/xbuilder/)\n\n💡 You can continue chatting to make changes, then publish again to update your live site.`);
+
                     setTimeout(() => {
-                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                         btn.classList.add('bg-green-600', 'hover:bg-green-700');
                         btn.classList.remove('bg-emerald-600');
                         btn.disabled = false;
-                    }, 3000);
+                    }, 5000);
                 } else {
                     alert('Failed to publish: ' + (data.error || 'Unknown error'));
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                     btn.disabled = false;
                 }
             } catch (error) {
                 alert('Connection error. Please try again.');
-                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Publish</span>';
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Publish to Live Site</span>';
                 btn.disabled = false;
             }
         }
@@ -564,7 +626,6 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 if (data.success) {
                     uploadedDocument = data.content;
                     const wordCount = Math.round(data.length / 5); // Rough word count estimate
-                    status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
 
                     console.log('[XBuilder] Uploaded document:', {
                         filename: file.name,
@@ -572,24 +633,48 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                         preview: data.preview || data.content.substring(0, 200)
                     });
 
-                    // Add message about the upload
-                    addMessageToUI('user', `📄 Uploaded: ${file.name}`);
-                    conversationHistory.push({
-                        role: 'user',
-                        content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
-                    });
+                    // Check if content looks valid (not mostly garbage/binary)
+                    const isPDF = file.name.toLowerCase().endsWith('.pdf');
+                    const hasValidText = data.content && /[a-zA-Z]{3,}/.test(data.content);
+                    const suspiciousContent = data.length < 100 || !hasValidText;
 
-                    // Show hint that document will be sent with next message
-                    setTimeout(() => {
-                        status.innerHTML = `<span class="text-blue-400">📎 Document ready - will be sent with your next message</span>`;
-                    }, 1500);
+                    if (isPDF && suspiciousContent) {
+                        // PDF extraction might have failed
+                        status.innerHTML = `<span class="text-yellow-400">⚠️ ${file.name} uploaded, but text extraction may have failed (${wordCount} words). Try DOCX format for better results.</span>`;
+                        console.warn('[XBuilder] PDF extraction suspicious - content length:', data.length);
 
-                    // Hide upload area after 3 seconds
-                    setTimeout(() => {
-                        document.getElementById('uploadArea').classList.add('hidden');
-                    }, 3000);
+                        // Don't add to conversation if extraction clearly failed
+                        addMessageToUI('user', `📄 Uploaded: ${file.name} (extraction may have failed)`);
+                        addMessageToUI('assistant', `⚠️ I had trouble extracting text from that PDF. For best results, please upload your CV as a **.docx** or **.txt** file instead. Some PDFs are encrypted or use special formatting that makes extraction difficult.`);
+                        uploadedDocument = null; // Clear the bad content
+                    } else {
+                        // Successful extraction
+                        status.innerHTML = `<span class="text-green-400">✓ ${file.name} uploaded (${wordCount} words extracted)</span>`;
+
+                        // Add message about the upload
+                        addMessageToUI('user', `📄 Uploaded: ${file.name}`);
+                        conversationHistory.push({
+                            role: 'user',
+                            content: `I've uploaded my document: ${file.name}. Here's the content:\n\n${data.content.substring(0, 500)}...`
+                        });
+
+                        // Show hint that document will be sent with next message
+                        setTimeout(() => {
+                            status.innerHTML = `<span class="text-blue-400">📎 Document ready - will be sent with your next message</span>`;
+                        }, 1500);
+
+                        // Hide upload area after 3 seconds
+                        setTimeout(() => {
+                            document.getElementById('uploadArea').classList.add('hidden');
+                        }, 3000);
+                    }
                 } else {
                     status.innerHTML = `<span class="text-red-400">✗ ${data.error || 'Upload failed'}</span>`;
+
+                    // If it's a PDF error, suggest alternatives
+                    if (data.error && data.error.includes('PDF')) {
+                        addMessageToUI('assistant', `⚠️ ${data.error}\n\n**Tip**: For best results with CVs, use **.docx** or **.txt** format instead of PDF.`);
+                    }
                 }
             } catch (error) {
                 status.innerHTML = '<span class="text-red-400">✗ Upload failed</span>';

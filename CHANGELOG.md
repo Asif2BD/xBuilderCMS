@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-12-30
+
+### Fixed
+- **PDF text extraction returning corrupted data**: Critical bug causing AI to receive garbage instead of readable text
+  - Changed `exec()` to `shell_exec()` for proper pdftotext output capture
+  - Added `-enc UTF-8` flag for better character encoding
+  - Try extraction with and without `-layout` flag (some PDFs work better without)
+  - Validate extracted text (minimum length, no error messages, readable characters)
+  - Improved fallback method to skip binary data
+  - Added comprehensive logging at each extraction stage
+  - Client-side validation detects suspicious content (< 100 chars, no text)
+  - Warn users if PDF extraction fails with suggestion to use DOCX
+  - Upload area now shows: "DOCX recommended for CVs"
+  - Auto-clear bad content instead of sending garbage to AI
+  - Better error messages explaining what to do
+
+## [0.4.0] - 2025-12-30
+
+### Added
+- **LinkedIn profile fetching**: Paste LinkedIn URL to auto-fetch profile data
+  - New `/xbuilder/api/linkedin.php` endpoint
+  - Automatically detects LinkedIn URLs in chat messages
+  - Extracts name, headline, location from public profiles
+  - Parses JSON-LD structured data and Open Graph meta tags
+  - No API key required - works with public LinkedIn profiles
+  - Shows real-time status: "Fetching LinkedIn profile..."
+  - Fallback handling for private/inaccessible profiles
+  - Seamlessly combines with uploaded CV data
+
+### Changed
+- **Improved deployment clarity**: Publish button and messaging now crystal clear
+  - Button renamed: "Publish" → "Publish to Live Site"
+  - Success message shows: Live URL, Admin Panel URL, file location
+  - Extended success display (3s → 5s)
+  - Better globe icon for publish button
+  - Makes it obvious the site publishes to root domain, not a subfolder
+
+### Fixed
+- **Version display bug**: Fixed hardcoded fallback versions in all UI views
+  - chat.php, login.php, setup.php all had `0.2.0` fallback
+  - Now correctly fall back to `0.4.0` (current version)
+  - Version number now displays accurately across all pages
+
 ## [0.3.3] - 2025-12-30
 
 ### Fixed
@@ -174,6 +217,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.4.1** - Critical bug fix (PDF extraction returning corrupted data)
+- **0.4.0** - New feature (LinkedIn profile fetching, deployment UX improvements)
 - **0.3.3** - Bug fix (document upload - PDF extraction and AI integration)
 - **0.3.2** - Bug fix (Gemini API model updated to 2.5-flash)
 - **0.3.1** - Incomplete fix (used deprecated Gemini 1.5 model)

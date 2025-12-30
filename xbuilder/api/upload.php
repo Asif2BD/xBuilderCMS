@@ -120,47 +120,68 @@ function extractPdfText(string $path): string
 {
     // Check if pdftotext is available
     $pdftotext = trim(shell_exec('which pdftotext 2>/dev/null'));
-    
+
     if ($pdftotext) {
-        // Use pdftotext
-        $output = [];
-        $returnCode = 0;
-        exec("pdftotext -layout " . escapeshellarg($path) . " - 2>/dev/null", $output, $returnCode);
-        
-        if ($returnCode === 0 && !empty($output)) {
-            return implode("\n", $output);
+        // Use pdftotext with UTF-8 encoding
+        // Output to stdout and capture with shell_exec (more reliable than exec)
+        $text = shell_exec("pdftotext -enc UTF-8 -layout " . escapeshellarg($path) . " - 2>&1");
+
+        // Check if we got actual text (not error messages)
+        if ($text && strlen($text) > 50 && !str_contains($text, 'Error') && !str_contains($text, 'Syntax Error')) {
+            error_log("[XBuilder PDF] Extracted " . strlen($text) . " chars using pdftotext");
+            return $text;
         }
+
+        // Try without -layout flag (some PDFs work better)
+        $text = shell_exec("pdftotext -enc UTF-8 " . escapeshellarg($path) . " - 2>&1");
+
+        if ($text && strlen($text) > 50 && !str_contains($text, 'Error') && !str_contains($text, 'Syntax Error')) {
+            error_log("[XBuilder PDF] Extracted " . strlen($text) . " chars using pdftotext (no layout)");
+            return $text;
+        }
+
+        error_log("[XBuilder PDF] pdftotext failed or returned too little text");
     }
-    
+
     // Fallback: Try to read raw PDF content
+    error_log("[XBuilder PDF] Attempting fallback extraction");
     $content = file_get_contents($path);
-    
-    // Very basic PDF text extraction (works for some PDFs)
+
+    // Very basic PDF text extraction (works for some uncompressed PDFs)
     $text = '';
-    
+
     // Find text between stream and endstream
     preg_match_all('/stream(.*?)endstream/s', $content, $matches);
-    
+
     foreach ($matches[1] as $match) {
-        // Try to decode if it's compressed
+        // Try to decode if it's compressed with FlateDecode
         $decoded = @gzuncompress($match);
         if ($decoded) {
             $match = $decoded;
         }
-        
-        // Extract text objects
-        preg_match_all('/\((.*?)\)/', $match, $textMatches);
+
+        // Extract text objects between parentheses
+        preg_match_all('/\((.*?)\)/s', $match, $textMatches);
         foreach ($textMatches[1] as $textMatch) {
+            // Skip if it looks like binary data
+            if (preg_match('/[\x00-\x08\x0B-\x0C\x0E-\x1F]/', $textMatch)) {
+                continue;
+            }
             $text .= $textMatch . ' ';
         }
     }
-    
-    if (!empty(trim($text))) {
-        return trim($text);
+
+    $text = trim($text);
+
+    // If we got some text, return it
+    if (!empty($text) && strlen($text) > 30) {
+        error_log("[XBuilder PDF] Extracted " . strlen($text) . " chars using fallback method");
+        return $text;
     }
-    
+
     // If all else fails, suggest an alternative
-    throw new Exception('PDF text extraction not available. Please try uploading a TXT or DOCX file.');
+    error_log("[XBuilder PDF] Extraction failed completely");
+    throw new Exception('Could not extract text from this PDF. It may be encrypted, scanned, or have special encoding. Please try uploading a DOCX or TXT file instead.');
 }
 
 /**
