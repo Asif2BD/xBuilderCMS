@@ -157,6 +157,15 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         </div>
         
         <div class="flex items-center gap-3">
+            <!-- View Public Website Button (shows when site is published) -->
+            <a href="/" target="_blank" id="viewSiteBtn"
+               class="hidden px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-2 font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                View Public Website
+            </a>
+
             <button onclick="copyDebugInfo()"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
                     title="Copy debug info to clipboard">
@@ -303,6 +312,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
             loadConversation();
             setupDropZone();
             initResizeHandle();
+            checkPublishedSite();
         });
         
         // Load existing conversation
@@ -561,12 +571,18 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
             const frame = document.getElementById('previewFrame');
             const codeContent = document.getElementById('codeContent');
             const codePlaceholder = document.getElementById('codePlaceholder');
-            
-            // Update preview
+
+            // Update preview with cache busting
             placeholder.classList.add('hidden');
             frame.classList.remove('hidden');
-            frame.srcdoc = html;
-            
+
+            // Force reload by clearing and setting srcdoc
+            // This prevents old cached content from showing
+            frame.srcdoc = '';
+            setTimeout(() => {
+                frame.srcdoc = html;
+            }, 10);
+
             // Update code view
             codePlaceholder.classList.add('hidden');
             codeContent.classList.remove('hidden');
@@ -607,6 +623,14 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
 
                     // Get the root domain URL (without /xbuilder/ path)
                     const rootUrl = window.location.origin;
+
+                    // Show "View Public Website" button in header
+                    const viewSiteBtn = document.getElementById('viewSiteBtn');
+                    if (viewSiteBtn) {
+                        viewSiteBtn.classList.remove('hidden');
+                        // Add cache busting to URL
+                        viewSiteBtn.href = `/?v=${Date.now()}`;
+                    }
 
                     // Show success message with clear instructions
                     addMessageToUI('assistant', `🎉 **Your website is now LIVE!**\n\n📍 **Live URL**: [${rootUrl}](${rootUrl}) (open in new tab)\n\n✅ **Published to**: Root domain (\`/site/index.html\`)\n🔧 **Admin Panel**: [${rootUrl}/xbuilder/](${rootUrl}/xbuilder/)\n\n💡 You can continue chatting to make changes, then publish again to update your live site.`);
@@ -751,10 +775,10 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
         // New conversation
         async function startNewConversation() {
             if (!confirm('Start a new conversation? This will clear the current chat.')) return;
-            
+
             try {
                 await fetch('/xbuilder/api/chat?action=clear', { method: 'POST' });
-                
+
                 // Clear UI
                 document.getElementById('messages').innerHTML = '';
                 document.getElementById('previewPlaceholder').classList.remove('hidden');
@@ -762,16 +786,37 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 document.getElementById('codePlaceholder').classList.remove('hidden');
                 document.getElementById('codeContent').classList.add('hidden');
                 document.getElementById('publishBtn').classList.add('hidden');
-                
+
                 // Reset state
                 conversationHistory = [];
                 generatedHtml = null;
                 uploadedDocument = null;
-                
+
                 // Show welcome message
                 addMessageToUI('assistant', getWelcomeMessage(), false);
             } catch (error) {
                 console.error('Failed to start new conversation');
+            }
+        }
+
+        // Check if a site is published and show "View Public Website" button
+        async function checkPublishedSite() {
+            try {
+                // Check if index.html exists by fetching it
+                const response = await fetch('/', { method: 'HEAD' });
+
+                // If site exists (200 OK), show the View button
+                if (response.ok) {
+                    const viewSiteBtn = document.getElementById('viewSiteBtn');
+                    if (viewSiteBtn) {
+                        viewSiteBtn.classList.remove('hidden');
+                        // Add cache busting
+                        viewSiteBtn.href = `/?v=${Date.now()}`;
+                    }
+                }
+            } catch (error) {
+                // Site doesn't exist, keep button hidden
+                console.log('[XBuilder] No published site found');
             }
         }
         

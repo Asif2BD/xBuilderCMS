@@ -224,6 +224,17 @@ The code block MUST:
 - Scroll-triggered animations (Intersection Observer)
 - Test breakpoints: Mobile (< 640px), Tablet (640-1024px), Desktop (> 1024px)
 
+### Performance Optimization (CRITICAL)
+- Use Tailwind CDN (https://cdn.tailwindcss.com) for fast CSS
+- Google Fonts with `&display=swap` for no render-blocking
+- Minimize JavaScript - keep it simple and efficient
+- No external dependencies beyond Tailwind and Google Fonts
+- Inline all custom CSS in `<style>` tag (no external files)
+- Inline all JavaScript in `<script>` tag (no external files)
+- Use CSS transforms for animations (GPU-accelerated)
+- Lazy-load images if used (loading="lazy")
+- Single HTML file for instant loading (no multi-file complexity)
+
 ## DESIGN VARIATIONS
 
 Create DIFFERENT aesthetics based on context:
