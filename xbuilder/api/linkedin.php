@@ -24,8 +24,12 @@ if (!isset($input['url']) || empty($input['url'])) {
 
 $linkedinUrl = trim($input['url']);
 
+// Log the request
+error_log("[XBuilder LinkedIn] Fetching profile: $linkedinUrl");
+
 // Validate LinkedIn URL
 if (!preg_match('/linkedin\.com\/(in|pub)\//', $linkedinUrl)) {
+    error_log("[XBuilder LinkedIn] Invalid URL format");
     echo json_encode(['success' => false, 'error' => 'Invalid LinkedIn profile URL. Must be a linkedin.com/in/... URL']);
     exit;
 }
@@ -35,14 +39,20 @@ try {
     $html = fetchLinkedInProfile($linkedinUrl);
 
     if (!$html) {
+        error_log("[XBuilder LinkedIn] Failed to fetch HTML (empty response)");
         echo json_encode(['success' => false, 'error' => 'Could not fetch LinkedIn profile. The profile may be private or the URL is invalid.']);
         exit;
     }
 
+    error_log("[XBuilder LinkedIn] Fetched " . strlen($html) . " chars of HTML");
+
     // Parse profile data
     $profileData = parseLinkedInProfile($html, $linkedinUrl);
 
+    error_log("[XBuilder LinkedIn] Parsed data - Name: " . ($profileData['name'] ?? 'none') . ", Headline: " . ($profileData['headline'] ?? 'none'));
+
     if (empty($profileData['name']) && empty($profileData['headline'])) {
+        error_log("[XBuilder LinkedIn] No name or headline extracted");
         echo json_encode(['success' => false, 'error' => 'Could not extract profile data. The profile may be private or require login.']);
         exit;
     }

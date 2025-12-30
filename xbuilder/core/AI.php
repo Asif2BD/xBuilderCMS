@@ -273,10 +273,18 @@ PROMPT;
             ];
         }
 
+        // Log document content status
+        if ($documentContent) {
+            error_log("[XBuilder AI] Document provided: " . strlen($documentContent) . " chars, preview: " . substr($documentContent, 0, 100));
+        } else {
+            error_log("[XBuilder AI] No document content provided to AI");
+        }
+
         // Add document content to the context if provided
         $systemPrompt = $this->getSystemPrompt();
         if ($documentContent) {
             $systemPrompt .= "\n\n## User's Document Content\n\nThe user has uploaded a document. Here is the extracted content:\n\n" . $documentContent;
+            error_log("[XBuilder AI] Added document to system prompt, total prompt length: " . strlen($systemPrompt));
         }
 
         try {
