@@ -122,6 +122,75 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
             color: white;
             border-color: #6366f1;
         }
+
+        /* Resize handle */
+        .resize-handle {
+            width: 4px;
+            background: transparent;
+            cursor: col-resize;
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.dragging {
+            background: #6366f1;
+        }
+
+        .resize-handle::before {
+            content: '';
+            position: absolute;
+            left: -2px;
+            right: -2px;
+            top: 0;
+            bottom: 0;
+        }
+
+        /* Quick select options */
+        .quick-select-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .quick-select-btn {
+            padding: 0.5rem 1rem;
+            background: #1a1a25;
+            border: 1px solid #32324a;
+            border-radius: 0.5rem;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-select-btn:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+            transform: translateY(-1px);
+        }
+
+        .quick-select-btn.large {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .quick-select-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(26, 26, 37, 0.5);
+            border-radius: 0.75rem;
+            border: 1px solid #32324a;
+        }
+
+        .quick-select-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body class="font-sans text-white h-screen flex flex-col">
@@ -133,6 +202,15 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         </div>
         
         <div class="flex items-center gap-3">
+            <!-- View Public Website Button (shows when site is published) -->
+            <a href="/" target="_blank" id="viewSiteBtn"
+               class="hidden px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-2 font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                View Public Website
+            </a>
+
             <button onclick="copyDebugInfo()"
                     class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
                     title="Copy debug info to clipboard">
@@ -160,7 +238,7 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
     <!-- Main Content -->
     <div class="flex-1 flex overflow-hidden">
         <!-- Chat Panel -->
-        <div class="w-1/2 flex flex-col border-r border-dark-600">
+        <div id="chatPanel" class="flex flex-col border-r border-dark-600" style="width: 50%">
             <!-- Messages -->
             <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4">
                 <!-- Welcome message will be added by JS -->
@@ -210,9 +288,12 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 </div>
             </div>
         </div>
-        
+
+        <!-- Resize Handle -->
+        <div id="resizeHandle" class="resize-handle"></div>
+
         <!-- Preview Panel -->
-        <div class="w-1/2 flex flex-col bg-dark-900">
+        <div id="previewPanel" class="flex flex-col bg-dark-900" style="width: 50%">
             <!-- Tabs -->
             <div class="flex border-b border-dark-600 shrink-0">
                 <button onclick="showTab('preview')" 
@@ -275,6 +356,8 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         document.addEventListener('DOMContentLoaded', () => {
             loadConversation();
             setupDropZone();
+            initResizeHandle();
+            checkPublishedSite();
         });
         
         // Load existing conversation
@@ -303,11 +386,83 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
         }
         
         function getWelcomeMessage() {
+            // Create welcome message with interactive options
+            setTimeout(() => {
+                showQuickSelectOptions();
+            }, 500);
+
             return `Hey! 👋 I'm excited to help you create a website.
 
-What are we building today - a portfolio, a business site, or something else?
+**Quick Start**: Choose an option below, or tell me what you need!`;
+        }
 
-If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll craft something that really captures who you are.`;
+        function showQuickSelectOptions() {
+            const messagesDiv = document.getElementById('messages');
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'message max-w-[85%]';
+            optionsDiv.innerHTML = `
+                <div class="bg-dark-700 rounded-2xl rounded-bl-md px-4 py-4">
+                    <div class="quick-select-label">🎯 What type of website do you need?</div>
+                    <div class="quick-select-container">
+                        <button class="quick-select-btn large" onclick="selectWebsiteType('Portfolio')">
+                            💼 Portfolio
+                        </button>
+                        <button class="quick-select-btn large" onclick="selectWebsiteType('Business')">
+                            🏢 Business
+                        </button>
+                        <button class="quick-select-btn large" onclick="selectWebsiteType('Landing Page')">
+                            🚀 Landing Page
+                        </button>
+                        <button class="quick-select-btn large" onclick="selectWebsiteType('Personal Brand')">
+                            ✨ Personal Brand
+                        </button>
+                    </div>
+
+                    <div class="quick-select-section">
+                        <div class="quick-select-label">🎨 Or pick a vibe:</div>
+                        <div class="quick-select-container">
+                            <button class="quick-select-btn" onclick="selectVibe('Modern & Minimalist')">Modern & Minimalist</button>
+                            <button class="quick-select-btn" onclick="selectVibe('Bold & Creative')">Bold & Creative</button>
+                            <button class="quick-select-btn" onclick="selectVibe('Professional & Clean')">Professional & Clean</button>
+                            <button class="quick-select-btn" onclick="selectVibe('Playful & Colorful')">Playful & Colorful</button>
+                        </div>
+                    </div>
+
+                    <div class="quick-select-section">
+                        <div class="quick-select-label">📄 Have a CV or LinkedIn profile?</div>
+                        <div class="quick-select-container">
+                            <button class="quick-select-btn" onclick="document.getElementById('fileInput').click()">
+                                📎 Upload CV
+                            </button>
+                            <button class="quick-select-btn" onclick="promptLinkedIn()">
+                                🔗 Enter LinkedIn URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            messagesDiv.appendChild(optionsDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function selectWebsiteType(type) {
+            const message = `I want a ${type} website`;
+            document.getElementById('userInput').value = message;
+            sendMessage();
+        }
+
+        function selectVibe(vibe) {
+            const message = `I want a ${vibe} style website`;
+            document.getElementById('userInput').value = message;
+            sendMessage();
+        }
+
+        function promptLinkedIn() {
+            const url = prompt('Enter your LinkedIn profile URL:');
+            if (url && url.includes('linkedin.com')) {
+                document.getElementById('userInput').value = url;
+                sendMessage();
+            }
         }
         
         // Send message
@@ -533,12 +688,18 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
             const frame = document.getElementById('previewFrame');
             const codeContent = document.getElementById('codeContent');
             const codePlaceholder = document.getElementById('codePlaceholder');
-            
-            // Update preview
+
+            // Update preview with cache busting
             placeholder.classList.add('hidden');
             frame.classList.remove('hidden');
-            frame.srcdoc = html;
-            
+
+            // Force reload by clearing and setting srcdoc
+            // This prevents old cached content from showing
+            frame.srcdoc = '';
+            setTimeout(() => {
+                frame.srcdoc = html;
+            }, 10);
+
             // Update code view
             codePlaceholder.classList.add('hidden');
             codeContent.classList.remove('hidden');
@@ -579,6 +740,14 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
 
                     // Get the root domain URL (without /xbuilder/ path)
                     const rootUrl = window.location.origin;
+
+                    // Show "View Public Website" button in header
+                    const viewSiteBtn = document.getElementById('viewSiteBtn');
+                    if (viewSiteBtn) {
+                        viewSiteBtn.classList.remove('hidden');
+                        // Add cache busting to URL
+                        viewSiteBtn.href = `/?v=${Date.now()}`;
+                    }
 
                     // Show success message with clear instructions
                     addMessageToUI('assistant', `🎉 **Your website is now LIVE!**\n\n📍 **Live URL**: [${rootUrl}](${rootUrl}) (open in new tab)\n\n✅ **Published to**: Root domain (\`/site/index.html\`)\n🔧 **Admin Panel**: [${rootUrl}/xbuilder/](${rootUrl}/xbuilder/)\n\n💡 You can continue chatting to make changes, then publish again to update your live site.`);
@@ -723,10 +892,10 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
         // New conversation
         async function startNewConversation() {
             if (!confirm('Start a new conversation? This will clear the current chat.')) return;
-            
+
             try {
                 await fetch('/xbuilder/api/chat?action=clear', { method: 'POST' });
-                
+
                 // Clear UI
                 document.getElementById('messages').innerHTML = '';
                 document.getElementById('previewPlaceholder').classList.remove('hidden');
@@ -734,16 +903,37 @@ If you have a **CV** or **LinkedIn profile**, feel free to share it and I'll cra
                 document.getElementById('codePlaceholder').classList.remove('hidden');
                 document.getElementById('codeContent').classList.add('hidden');
                 document.getElementById('publishBtn').classList.add('hidden');
-                
+
                 // Reset state
                 conversationHistory = [];
                 generatedHtml = null;
                 uploadedDocument = null;
-                
+
                 // Show welcome message
                 addMessageToUI('assistant', getWelcomeMessage(), false);
             } catch (error) {
                 console.error('Failed to start new conversation');
+            }
+        }
+
+        // Check if a site is published and show "View Public Website" button
+        async function checkPublishedSite() {
+            try {
+                // Check if index.html exists by fetching it
+                const response = await fetch('/', { method: 'HEAD' });
+
+                // If site exists (200 OK), show the View button
+                if (response.ok) {
+                    const viewSiteBtn = document.getElementById('viewSiteBtn');
+                    if (viewSiteBtn) {
+                        viewSiteBtn.classList.remove('hidden');
+                        // Add cache busting
+                        viewSiteBtn.href = `/?v=${Date.now()}`;
+                    }
+                }
+            } catch (error) {
+                // Site doesn't exist, keep button hidden
+                console.log('[XBuilder] No published site found');
             }
         }
         
@@ -869,6 +1059,69 @@ Please paste this information when reporting issues to help with debugging.
             if (window.xbuilderLogs.length > 100) window.xbuilderLogs.shift();
             originalError.apply(console, args);
         };
+
+        // Resizable panels
+        function initResizeHandle() {
+            const chatPanel = document.getElementById('chatPanel');
+            const previewPanel = document.getElementById('previewPanel');
+            const resizeHandle = document.getElementById('resizeHandle');
+
+            // Load saved width from localStorage
+            const savedChatWidth = localStorage.getItem('xbuilder-chat-width');
+            if (savedChatWidth) {
+                const chatWidth = parseFloat(savedChatWidth);
+                chatPanel.style.width = chatWidth + '%';
+                previewPanel.style.width = (100 - chatWidth) + '%';
+            }
+
+            let isDragging = false;
+            let startX = 0;
+            let startChatWidth = 0;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startChatWidth = chatPanel.offsetWidth;
+                resizeHandle.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const containerWidth = chatPanel.parentElement.offsetWidth;
+                const deltaX = e.clientX - startX;
+                const newChatWidth = startChatWidth + deltaX;
+
+                // Constrain between 20% and 80%
+                const minWidth = containerWidth * 0.2;
+                const maxWidth = containerWidth * 0.8;
+
+                if (newChatWidth >= minWidth && newChatWidth <= maxWidth) {
+                    const chatWidthPercent = (newChatWidth / containerWidth) * 100;
+                    const previewWidthPercent = 100 - chatWidthPercent;
+
+                    chatPanel.style.width = chatWidthPercent + '%';
+                    previewPanel.style.width = previewWidthPercent + '%';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    resizeHandle.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+
+                    // Save width to localStorage
+                    const containerWidth = chatPanel.parentElement.offsetWidth;
+                    const chatWidthPercent = (chatPanel.offsetWidth / containerWidth) * 100;
+                    localStorage.setItem('xbuilder-chat-width', chatWidthPercent.toFixed(2));
+                }
+            });
+        }
     </script>
 
     <!-- Version Footer -->

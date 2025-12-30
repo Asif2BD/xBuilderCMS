@@ -28,3 +28,6 @@ Thumbs.db
 # Backup files
 *.backup
 *.bak
+
+# Security analysis (internal only - don't expose vulnerabilities publicly)
+SECURITY-ANALYSIS.md
