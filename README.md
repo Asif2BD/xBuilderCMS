@@ -1,8 +1,14 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
+
 **Create stunning, unique websites through conversation with AI.**
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
+
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.2.0** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
@@ -185,6 +191,35 @@ After configuring your web server:
 3. Complete the setup wizard
 4. Start building your website!
 
+## 📋 Versioning & Changelog
+
+XBuilder follows [Semantic Versioning](https://semver.org/) (SemVer):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for new features (backward compatible)
+- **PATCH** version for bug fixes (backward compatible)
+
+**Current Version: 0.2.0**
+
+See the [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes in each version.
+
+### Recent Updates
+
+**v0.2.0** (2025-12-30)
+- ✅ Multi-server support: Apache, Nginx, OpenLiteSpeed
+- ✅ Complete deployment guides
+- ✅ Fixed 403 directory access error
+
+**v0.1.4** (2025-12-30)
+- ✅ Fixed Gemini API compatibility issue
+
+**v0.1.3** (2025-12-30)
+- ✅ Updated license to AGPL-3.0
+
+**v0.1.0** (2025-12-28)
+- 🎉 Initial release with complete Phase 1 features
+
+[View Full Changelog →](CHANGELOG.md)
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -195,9 +230,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+Please read [CHANGELOG.md](CHANGELOG.md) to understand our versioning system.
+
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+
+The AGPL-3.0 license ensures that if you modify and deploy XBuilder on a server, you must make your source code available to users.
 
 ## 🙏 Acknowledgments
 

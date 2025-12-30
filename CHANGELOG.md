@@ -1,0 +1,188 @@
+# Changelog
+
+All notable changes to XBuilder will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.0] - 2025-12-30
+
+### Added
+- **Multi-server support**: Full compatibility with Apache, Nginx, and OpenLiteSpeed
+- `nginx.conf`: Production-ready Nginx configuration with security headers and caching
+- `.htaccess.litespeed`: OpenLiteSpeed optimized configuration with LiteSpeed Cache
+- `DEPLOYMENT.md`: Comprehensive deployment guide for all three web servers
+- SSL/HTTPS configuration examples for all servers
+- Troubleshooting guides for common deployment issues
+- `/xbuilder/index.php`: Entry point for direct directory access
+
+### Fixed
+- **403 Forbidden error** when accessing `/xbuilder/` directory after setup
+- Apache rewrite conditions now properly handle directory access
+
+### Changed
+- README.md: Expanded web server configuration section with detailed instructions
+- Storage directory protection now implemented across all three web servers
+
+## [0.1.4] - 2025-12-30
+
+### Fixed
+- **Gemini API compatibility issue**: Updated API endpoint from `v1beta` to `v1` (stable)
+- Model changed to `gemini-1.5-flash-latest` for better reliability
+- Resolves error: "models/gemini-1.5-flash is not found for API version v1beta"
+
+## [0.1.3] - 2025-12-30
+
+### Changed
+- **License updated to AGPL-3.0**: Switched from MIT to GNU Affero General Public License v3.0
+- Added personal attribution "Made with ❤️ by Asif Rahman" to README.md
+- Standard AGPL-3.0 license text from official GNU source
+
+### Fixed
+- Attribution placement: Moved personal touch from LICENSE to README (best practice)
+
+## [0.1.2] - 2025-12-28
+
+### Changed
+- Unified codebase: Merged best features from parallel development branches
+- Enhanced core classes with improved features:
+  - **Security.php**: Session namespacing, CSRF expiry, secure key deletion
+  - **Generator.php**: Backup before publish, ZIP export, HTML validation
+  - **AI.php**: Enhanced system prompt, API key testing, DI support
+  - **Config.php**: Dot notation for nested values, version tracking
+  - **Conversation.php**: Session namespacing, archiving, metadata storage
+
+### Fixed
+- Resolved code duplication from Claude web synchronization
+- Consolidated instance-based architecture across all core classes
+
+## [0.1.1] - 2025-12-28
+
+### Added
+- Initial code unification from multiple development streams
+- Storage directory protection with `.htaccess`
+- Session-based authentication with 24-hour expiry
+- CSRF token protection with 1-hour expiry
+
+### Changed
+- Converted all core classes to instance-based pattern for better dependency injection
+- Implemented Argon2id password hashing with configurable parameters
+- Rate limiting on failed login attempts (0.5s delay)
+
+## [0.1.0] - 2025-12-28
+
+### Added
+- **Initial XBuilder Phase 1 Release** 🎉
+- AI-powered website generation with natural conversation interface
+- Support for three AI providers:
+  - Claude (Anthropic) - claude-sonnet-4-20250514
+  - Gemini (Google) - gemini-1.5-flash
+  - ChatGPT (OpenAI) - gpt-4o-mini
+- Document upload support (PDF, DOCX, DOC, TXT, MD, JSON)
+- CV/resume parsing and content extraction
+- Complete admin interface at `/xbuilder/`
+- Setup wizard for initial configuration
+- Secure API key storage with AES-256-CBC encryption
+- Single-file HTML output (pure static sites)
+- Tailwind CSS integration via CDN
+- Google Fonts support
+- Mobile-responsive designs
+- Conversation history management
+- Site preview and publishing system
+- Core architecture:
+  - `AI.php`: Multi-provider AI abstraction
+  - `Security.php`: Encryption, authentication, CSRF protection
+  - `Config.php`: Application configuration management
+  - `Generator.php`: HTML generation and site publishing
+  - `Conversation.php`: Chat history and context management
+- Apache support with `.htaccess` configuration
+- Modern dark theme admin interface
+- Emoji favicon trick for personalization
+- Production-ready code structure
+
+### Security
+- AES-256-CBC encryption for API keys
+- Argon2id password hashing
+- Session-based authentication
+- CSRF token protection
+- Storage directory protected from web access
+- Input validation and sanitization
+- Secure file upload handling
+
+## [0.0.1] - 2025-12-28
+
+### Added
+- Initial project structure
+- Basic file organization
+- Repository initialization
+
+---
+
+## Version History Summary
+
+- **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)
+- **0.1.4** - Gemini API compatibility fix
+- **0.1.3** - License update to AGPL-3.0
+- **0.1.2** - Codebase unification and enhancements
+- **0.1.1** - Security improvements and architecture refactoring
+- **0.1.0** - Initial working release with complete Phase 1 features
+- **0.0.1** - Project initialization
+
+---
+
+## Upgrade Notes
+
+### From 0.1.x to 0.2.0
+- No breaking changes
+- If deploying on Nginx or OpenLiteSpeed, use the new configuration files
+- Apache users: no action required, existing `.htaccess` continues to work
+
+### From 0.0.x to 0.1.x
+- First stable release
+- Complete setup wizard on first access
+- All API keys need to be configured via setup
+
+---
+
+## Roadmap
+
+### Planned for 0.3.0
+- [ ] Multiple pages support (About, Contact, Projects)
+- [ ] Image upload and optimization
+- [ ] Custom domain configuration helper
+- [ ] SEO meta tag editor
+- [ ] Analytics integration (Google Analytics, Plausible)
+
+### Planned for 0.4.0
+- [ ] Site export as ZIP file
+- [ ] Template/style presets (optional starting points)
+- [ ] AI-powered SEO suggestions
+- [ ] Performance optimization hints
+- [ ] Dark/light mode toggle for admin
+
+### Planned for 1.0.0 (Stable Release)
+- [ ] Multi-site support (multiple websites per installation)
+- [ ] User accounts and multi-tenancy
+- [ ] Plugin system for extensions
+- [ ] Theme marketplace integration
+- [ ] CLI tool for deployment
+- [ ] Docker support
+- [ ] Comprehensive testing suite
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Links
+
+- **Repository**: [github.com/Asif2BD/xBuilderCMS](https://github.com/Asif2BD/xBuilderCMS)
+- **Issues**: [github.com/Asif2BD/xBuilderCMS/issues](https://github.com/Asif2BD/xBuilderCMS/issues)
+- **Discussions**: [github.com/Asif2BD/xBuilderCMS/discussions](https://github.com/Asif2BD/xBuilderCMS/discussions)
+
+---
+
+**Maintained by Asif Rahman** | *Powered by xCloud.host*
