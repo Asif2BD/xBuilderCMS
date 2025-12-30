@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-12-30
+
+### Added
+- **Inline model switcher in chat header**: Switch AI models on-the-fly without opening settings
+  - Dropdown shows all available models grouped by provider
+  - Only shows providers with configured API keys
+  - Instant switching - no page reload needed
+  - Makes it easy to try different models (free vs paid)
+
+- **Expanded model support**: Added many more models for all providers
+  - **Gemini**: 6 models including free tier (2.0 Flash, 1.5 Flash, 1.5 Flash-8B, Thinking mode) and paid (1.5 Pro)
+  - **Claude**: 9 models from Haiku to Opus 4 (including latest Sonnet 4, Opus 4, 3.7 Sonnet)
+  - **OpenAI**: 8 models including reasoning models (GPT-4o, o1, o1-mini, o3-mini)
+  - Clear labels showing which models are free vs paid
+
+- **Professional fixed footer**: Replaced floating version badge with full-width footer
+  - Shows current version, active provider, and model
+  - GitHub link and copyright info
+  - Clean, professional appearance
+  - Doesn't interfere with chat interface
+
+### Changed
+- Model selection now uses config setting instead of hardcoded defaults
+- AI class constructor accepts custom model parameter
+- Footer spans full width for better visual balance
+
+### Improved
+- UI/UX: Easier to switch models - no need to open settings modal
+- UI/UX: Current AI configuration always visible in footer
+- Developer experience: setModel() and getModel() methods in AI class
+
 ## [0.6.3] - 2025-12-30
 
 ### Fixed
