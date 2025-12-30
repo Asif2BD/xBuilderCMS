@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-12-30
+
+### Fixed
+- **Gemini API model name**: Removed incorrect `-latest` suffix
+  - Changed from `gemini-1.5-flash-latest` to `gemini-1.5-flash`
+  - The v1 API does not support the `-latest` suffix
+  - Fixes error: "models/gemini-1.5-flash-latest is not found for API version v1"
+  - Gemini integration now works correctly
+
 ## [0.3.0] - 2025-12-30
 
 ### Added
@@ -146,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
+- **0.3.1** - Bug fix (Gemini API model name correction)
 - **0.3.0** - Platform enhancements (version display, automation)
 - **0.2.0** - Multi-server support (Apache, Nginx, OpenLiteSpeed)
 - **0.1.4** - Gemini API compatibility fix
