@@ -197,6 +197,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by [Your Name]**
+**Made with ❤️ by Asif Rahman**
 
 *Powered by xCloud.host*
