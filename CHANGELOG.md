@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.0] - 2025-12-30
+## [0.6.1] - 2025-12-30
 
 ### Added
 - **In-built update system**: One-click updates from GitHub
@@ -37,9 +37,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Safe file replacement (excludes user data)
   - Version verification
 
+- **AI Provider/Model Switcher**: Switch AI providers and models on-the-fly
+  - Settings modal accessible from chat interface
+  - Switch between Gemini, Claude, and OpenAI without restarting
+  - Support for multiple models per provider
+  - Model dropdown for active provider (Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro, etc.)
+  - Manage multiple API keys (add, update, delete)
+  - Visual indicators show active provider and API key status
+  - Quick links to get API keys for each provider
+  - Solves quota limit issues by allowing instant provider switching
+  - No setup wizard needed - configure everything from settings
+
+- **Settings API endpoint**: `/xbuilder/api/settings.php`
+  - `get_current`: Get current AI settings and available providers
+  - `switch_provider`: Switch to different AI provider
+  - `switch_model`: Switch to different model
+  - `add_api_key`: Add or update API key for provider
+  - `delete_api_key`: Remove API key for provider
+
 ### Changed
 - Updated `.gitignore` to exclude backups and security logs
 - Chat interface checks for updates 2 seconds after page load
+- Improved model selection with support for latest models (Gemini 2.0 Flash Exp, Claude Sonnet 4, GPT-4o)
+
+### Fixed
+- Quota limit errors can now be resolved by switching providers instantly
+- No need to restart or reconfigure when hitting API limits
 
 ### Benefits
 - Users can update XBuilder without SSH/Git access
