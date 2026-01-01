@@ -225,13 +225,14 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
                 View Public Website
             </a>
 
-            <!-- Update Available Button (shows when update is available) -->
-            <button onclick="showUpdateModal()" id="updateBtn"
-                    class="hidden px-4 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition flex items-center gap-2 font-medium animate-pulse">
+            <!-- Update Button (always visible) -->
+            <button onclick="manualCheckUpdate()" id="updateBtn"
+                    class="px-3 py-1.5 text-sm bg-dark-700 hover:bg-dark-600 rounded-lg transition flex items-center gap-2"
+                    title="Check for updates">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
-                <span id="updateBtnText">Update Available</span>
+                <span id="updateBtnText">Updates</span>
             </button>
 
             <button onclick="copyDebugInfo(event)"
@@ -514,57 +515,20 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
             input.value = '';
             autoResize(input);
 
-            // Check if message contains LinkedIn URL
+            // LinkedIn URL detection (scraping disabled due to anti-bot measures)
             const linkedinMatch = message.match(/https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[^\s]+/i);
             let linkedinData = null;
 
             if (linkedinMatch) {
                 const linkedinUrl = linkedinMatch[0];
-                console.log('[XBuilder] LinkedIn URL detected:', linkedinUrl);
+                console.log('[XBuilder] LinkedIn URL detected (scraping disabled):', linkedinUrl);
 
-                // Show status that we're fetching LinkedIn
-                showTypingIndicator();
-                isLoading = true;
-
-                // Add status message
-                const statusMsg = addMessageToUI('assistant', '🔍 Fetching LinkedIn profile...', false);
-
-                try {
-                    const linkedinResponse = await fetch('/xbuilder/api/linkedin', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: linkedinUrl })
-                    });
-
-                    const linkedinResult = await linkedinResponse.json();
-
-                    // Remove status message
-                    if (statusMsg && statusMsg.parentElement) {
-                        statusMsg.parentElement.removeChild(statusMsg);
-                    }
-
-                    if (linkedinResult.success) {
-                        linkedinData = linkedinResult.content;
-                        console.log('[XBuilder] LinkedIn profile fetched:', linkedinResult.structured.name);
-                        addMessageToUI('assistant', `✓ Got it! I've fetched your LinkedIn profile for **${linkedinResult.structured.name}**. Creating your website now...`);
-                    } else {
-                        console.warn('[XBuilder] LinkedIn fetch failed:', linkedinResult.error);
-                        addMessageToUI('assistant', `⚠️ I couldn't access that LinkedIn profile (it may be private). You can upload your CV instead, or tell me about yourself!`);
-                        hideTypingIndicator();
-                        isLoading = false;
-                        return;
-                    }
-                } catch (error) {
-                    console.error('[XBuilder] LinkedIn fetch error:', error);
-                    // Remove status message
-                    if (statusMsg && statusMsg.parentElement) {
-                        statusMsg.parentElement.removeChild(statusMsg);
-                    }
-                    addMessageToUI('assistant', `⚠️ Couldn't fetch LinkedIn profile. You can upload your CV or tell me about yourself instead!`);
-                    hideTypingIndicator();
-                    isLoading = false;
-                    return;
-                }
+                // LinkedIn has anti-bot measures that prevent reliable scraping
+                // Suggest CV upload instead
+                addMessageToUI('assistant', `📎 I see you shared a LinkedIn profile! Unfortunately, LinkedIn blocks automated profile fetching.\n\n**Instead, please:**\n• Upload your CV/resume using the 📎 button above, or\n• Tell me about yourself (profession, skills, experience, etc.)\n\nI'll create a stunning website based on that information!`);
+                hideTypingIndicator();
+                isLoading = false;
+                return;
             }
 
             // Show typing indicator
@@ -1365,7 +1329,7 @@ Please paste this information when reporting issues to help with debugging.
         let currentSettings = null;
 
         // Check for updates on page load
-        async function checkForUpdates() {
+        async function checkForUpdates(silent = true) {
             try {
                 const response = await fetch('/xbuilder/api/update', {
                     method: 'POST',
@@ -1381,20 +1345,49 @@ Please paste this information when reporting issues to help with debugging.
                     const updateBtnText = document.getElementById('updateBtnText');
 
                     if (updateBtn && updateBtnText) {
-                        updateBtn.classList.remove('hidden');
-                        updateBtnText.textContent = `Update to v${data.latest_version}`;
+                        // Make button green and show update available
+                        updateBtn.className = 'px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-lg transition flex items-center gap-2 animate-pulse font-medium';
+                        updateBtn.onclick = showUpdateModal;
+                        updateBtnText.textContent = `v${data.latest_version} Available!`;
                     }
 
                     console.log('[XBuilder Update] New version available:', data.latest_version);
+
+                    if (!silent) {
+                        alert(`🎉 Update available!\n\nCurrent: v${data.current_version}\nLatest: v${data.latest_version}\n\nClick the Updates button to install.`);
+                    }
+                } else if (!silent) {
+                    alert('✓ You\'re up to date!\n\nCurrent version: ' + data.current_version);
                 }
             } catch (error) {
                 console.error('[XBuilder Update] Failed to check for updates:', error);
+                if (!silent) {
+                    alert('Failed to check for updates. Please check your internet connection.');
+                }
             }
+        }
+
+        // Manual update check
+        async function manualCheckUpdate() {
+            const btn = document.getElementById('updateBtn');
+            const originalText = btn.querySelector('span').textContent;
+            btn.querySelector('span').textContent = 'Checking...';
+            btn.disabled = true;
+
+            await checkForUpdates(false);
+
+            if (!currentUpdateInfo) {
+                btn.querySelector('span').textContent = originalText;
+            }
+            btn.disabled = false;
         }
 
         // Show update modal
         function showUpdateModal() {
-            if (!currentUpdateInfo) return;
+            if (!currentUpdateInfo) {
+                manualCheckUpdate();
+                return;
+            }
 
             const modal = document.getElementById('updateModal');
             const content = document.getElementById('updateContent');
@@ -1727,11 +1720,18 @@ Please paste this information when reporting issues to help with debugging.
 
                 const data = await response.json();
 
-                if (!data.success) {
-                    alert('Error: ' + data.error);
+                if (data.success) {
+                    // Show success notification
+                    console.log('[XBuilder] Model switched to:', model);
+                    // Reload quick switcher and settings to update
+                    loadQuickModelSwitch();
+                } else {
+                    alert('Error switching model: ' + (data.error || 'Unknown error'));
+                    console.error('[XBuilder] Model switch failed:', data);
                 }
             } catch (error) {
-                alert('Failed to switch model');
+                console.error('[XBuilder] Model switch error:', error);
+                alert('Failed to switch model. Please check the console for details.');
             }
         }
 
