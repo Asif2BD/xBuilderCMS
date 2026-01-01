@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-01-01
+
+### Fixed
+- **Model switching error**: Fixed "Failed to save the model" error when switching AI models
+  - Added success feedback and UI reload after model switch
+  - Better error messages with console logging for debugging
+  - `switchModel()` function now properly updates quick switcher
+- **Update system visibility**: Made update checker always visible and functional
+  - Update button now always visible (was hidden before)
+  - Added manual check functionality with "Checking..." feedback
+  - Button turns green with pulse animation when update available
+  - Shows version number on button when update found
+- **LinkedIn profile fetching**: Disabled automated LinkedIn scraping
+  - LinkedIn has anti-bot measures that block reliable profile fetching
+  - Now shows helpful message suggesting CV upload or manual input
+  - Prevents confusing "profile may be private" errors for public profiles
+
+### Improved
+- Update checking system now supports both automatic (silent) and manual (with alerts) modes
+- Better user guidance when LinkedIn URLs are detected
+- More transparent about LinkedIn scraping limitations
+
+## [0.7.4] - 2025-12-30
+
+### Added
+- **Dual Gemini API setup instructions**: Shows both Free and Pro options
+  - **FREE tier**: Quick setup from AI Studio (limited quota, good for testing)
+  - **PRO tier**: Google Cloud Console setup (unlimited quota, pay-per-use)
+  - Expandable Pro setup steps with direct links to each configuration page
+  - Clear comparison: Free (0-60 req/day) vs Pro (1000+ req/min)
+  - Cost transparency: ~$0.001 per website generation
+  - Helps users choose the right option based on their needs
+
+### Improved
+- Settings modal now clearly shows both API key options for Gemini
+- Color-coded badges (Green for FREE, Purple for PRO)
+- Step-by-step Pro setup guide with clickable links
+- Better user guidance for resolving quota errors
+
 ## [0.7.3] - 2025-12-30
 
 ### Fixed
