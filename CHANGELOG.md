@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4] - 2025-12-30
+
+### Added
+- **Dual Gemini API setup instructions**: Shows both Free and Pro options
+  - **FREE tier**: Quick setup from AI Studio (limited quota, good for testing)
+  - **PRO tier**: Google Cloud Console setup (unlimited quota, pay-per-use)
+  - Expandable Pro setup steps with direct links to each configuration page
+  - Clear comparison: Free (0-60 req/day) vs Pro (1000+ req/min)
+  - Cost transparency: ~$0.001 per website generation
+  - Helps users choose the right option based on their needs
+
+### Improved
+- Settings modal now clearly shows both API key options for Gemini
+- Color-coded badges (Green for FREE, Purple for PRO)
+- Step-by-step Pro setup guide with clickable links
+- Better user guidance for resolving quota errors
+
 ## [0.7.3] - 2025-12-30
 
 ### Fixed

@@ -1604,11 +1604,55 @@ Please paste this information when reporting issues to help with debugging.
                                     </button>
                                     ${provider.has_key ? `<button onclick="deleteApiKey('${key}')" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition">Delete</button>` : ''}
                                 </div>
-                                <p class="text-xs text-gray-500">
-                                    ${key === 'gemini' ? 'Get from: https://aistudio.google.com/app/apikey' : ''}
-                                    ${key === 'claude' ? 'Get from: https://console.anthropic.com/settings/keys' : ''}
-                                    ${key === 'openai' ? 'Get from: https://platform.openai.com/api-keys' : ''}
-                                </p>
+
+                                ${key === 'gemini' ? `
+                                    <div class="mt-3 space-y-2">
+                                        <div class="bg-emerald-900/20 border border-emerald-800 rounded p-3">
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-xs font-semibold text-emerald-400 bg-emerald-900/40 px-2 py-1 rounded">FREE</span>
+                                                <div class="flex-1">
+                                                    <p class="text-xs text-emerald-300 font-semibold mb-1">Quick Setup (Free Tier)</p>
+                                                    <p class="text-xs text-gray-400 mb-2">Good for testing - Limited quota (0-60 requests/day)</p>
+                                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline">
+                                                        → Get Free API Key from AI Studio
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="bg-purple-900/20 border border-purple-800 rounded p-3">
+                                            <div class="flex items-start gap-2">
+                                                <span class="text-xs font-semibold text-purple-400 bg-purple-900/40 px-2 py-1 rounded">PRO</span>
+                                                <div class="flex-1">
+                                                    <p class="text-xs text-purple-300 font-semibold mb-1">Unlimited Usage (Paid)</p>
+                                                    <p class="text-xs text-gray-400 mb-2">High quota (1000+ req/min) - Pay per use (~$0.001/generation)</p>
+                                                    <details class="text-xs">
+                                                        <summary class="text-blue-400 hover:text-blue-300 cursor-pointer mb-2">→ Show Pro Setup Steps</summary>
+                                                        <ol class="list-decimal list-inside space-y-1 text-gray-400 pl-2 mt-2">
+                                                            <li>Go to <a href="https://console.cloud.google.com/" target="_blank" class="text-blue-400 hover:underline">Google Cloud Console</a></li>
+                                                            <li>Create/select a project</li>
+                                                            <li>Enable billing: <a href="https://console.cloud.google.com/billing" target="_blank" class="text-blue-400 hover:underline">Link billing account</a></li>
+                                                            <li>Enable API: <a href="https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com" target="_blank" class="text-blue-400 hover:underline">Generative Language API</a></li>
+                                                            <li>Create key: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-blue-400 hover:underline">API Credentials</a> → Create → API Key</li>
+                                                            <li>Restrict key to "Generative Language API" (recommended)</li>
+                                                        </ol>
+                                                    </details>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${key === 'claude' ? `
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Get API key from: <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blue-400 hover:text-blue-300 underline">Anthropic Console</a>
+                                    </p>
+                                ` : ''}
+
+                                ${key === 'openai' ? `
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Get API key from: <a href="https://platform.openai.com/api-keys" target="_blank" class="text-blue-400 hover:text-blue-300 underline">OpenAI Platform</a>
+                                    </p>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
