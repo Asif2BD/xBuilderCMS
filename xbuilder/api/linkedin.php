@@ -1,78 +1,22 @@
 <?php
 /**
- * XBuilder LinkedIn Profile Fetcher
+ * XBuilder LinkedIn Profile Fetcher - DISABLED
  *
- * Fetches and parses public LinkedIn profiles without requiring API access
+ * LinkedIn has anti-bot measures that prevent reliable automated profile scraping.
+ * Users should upload their CV or provide information manually instead.
  */
 
 header('Content-Type: application/json');
 
-// Only accept POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
-    exit;
-}
+// LinkedIn scraping disabled - always return helpful error message
+error_log("[XBuilder LinkedIn] LinkedIn scraping is disabled (anti-bot measures)");
 
-$input = json_decode(file_get_contents('php://input'), true);
-
-if (!isset($input['url']) || empty($input['url'])) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'LinkedIn URL required']);
-    exit;
-}
-
-$linkedinUrl = trim($input['url']);
-
-// Log the request
-error_log("[XBuilder LinkedIn] Fetching profile: $linkedinUrl");
-
-// Validate LinkedIn URL
-if (!preg_match('/linkedin\.com\/(in|pub)\//', $linkedinUrl)) {
-    error_log("[XBuilder LinkedIn] Invalid URL format");
-    echo json_encode(['success' => false, 'error' => 'Invalid LinkedIn profile URL. Must be a linkedin.com/in/... URL']);
-    exit;
-}
-
-try {
-    // Fetch the LinkedIn profile page
-    $html = fetchLinkedInProfile($linkedinUrl);
-
-    if (!$html) {
-        error_log("[XBuilder LinkedIn] Failed to fetch HTML (empty response)");
-        echo json_encode(['success' => false, 'error' => 'Could not fetch LinkedIn profile. The profile may be private or the URL is invalid.']);
-        exit;
-    }
-
-    error_log("[XBuilder LinkedIn] Fetched " . strlen($html) . " chars of HTML");
-
-    // Parse profile data
-    $profileData = parseLinkedInProfile($html, $linkedinUrl);
-
-    error_log("[XBuilder LinkedIn] Parsed data - Name: " . ($profileData['name'] ?? 'none') . ", Headline: " . ($profileData['headline'] ?? 'none'));
-
-    if (empty($profileData['name']) && empty($profileData['headline'])) {
-        error_log("[XBuilder LinkedIn] No name or headline extracted");
-        echo json_encode(['success' => false, 'error' => 'Could not extract profile data. The profile may be private or require login.']);
-        exit;
-    }
-
-    // Format as readable text
-    $content = formatProfileData($profileData);
-
-    echo json_encode([
-        'success' => true,
-        'content' => $content,
-        'structured' => $profileData,
-        'length' => strlen($content)
-    ]);
-
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'error' => 'Failed to fetch LinkedIn profile: ' . $e->getMessage()
-    ]);
-}
+echo json_encode([
+    'success' => false,
+    'error' => 'LinkedIn automated scraping is disabled due to anti-bot measures. Please upload your CV/resume or tell me about yourself instead.',
+    'disabled' => true
+]);
+exit;
 
 /**
  * Fetch LinkedIn profile HTML
