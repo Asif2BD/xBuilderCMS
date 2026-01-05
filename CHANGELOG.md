@@ -24,12 +24,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Better error logging for debugging scraping issues
   - Validates response size and HTTP status
   - Graceful fallback messages if scraping fails
+- **Session timeout**: Fixed premature logout issue
+  - Implemented sliding expiration (session renews on every activity)
+  - Previously expired exactly 2 hours after login (absolute timeout)
+  - Now expires after 2 hours of INACTIVITY
+  - Active users stay logged in indefinitely
+  - Configured PHP session settings (gc_maxlifetime, cookie_lifetime)
+  - Added secure cookie parameters (HttpOnly, SameSite=Lax, Secure on HTTPS)
+- **Update system**: Now checks main branch instead of GitHub Releases
+  - No longer depends on manually creating GitHub Releases
+  - Checks VERSION file directly from main branch
+  - Downloads main branch archive automatically
+  - Extracts changelog notes from CHANGELOG.md
+  - Simpler workflow: commit to main = update available
 
 ### Improved
 - Frontend now shows "🔍 Fetching your LinkedIn profile..." status during fetch
 - Success message displays fetched profile name
 - Backend extracts name, headline, location, and about section when available
 - More reliable profile data extraction from public LinkedIn profiles
+- Session management more user-friendly with automatic renewal
+- Update system more reliable without GitHub Release dependency
 
 ## [0.7.5] - 2026-01-01
 
