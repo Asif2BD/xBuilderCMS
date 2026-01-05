@@ -19,7 +19,8 @@
  * - Account lockout: 5 attempts, 15 min lockout
  * - Session hijacking prevention (IP + User-Agent validation)
  * - Security event logging to audit trail
- * - Reduced session lifetime (2 hours)
+ * - Session lifetime: 2 hours with sliding expiration (renews on activity)
+ * - Secure session cookies (HttpOnly, SameSite=Lax, Secure on HTTPS)
  */
 
 namespace XBuilder\Core;
@@ -247,6 +248,20 @@ class Security
     private function ensureSession(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
+            // Configure session settings before starting
+            ini_set('session.gc_maxlifetime', (string)self::SESSION_LIFETIME);
+            ini_set('session.cookie_lifetime', (string)self::SESSION_LIFETIME);
+
+            // Set session cookie parameters
+            session_set_cookie_params([
+                'lifetime' => self::SESSION_LIFETIME,
+                'path' => '/',
+                'domain' => '',
+                'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+
             session_start();
         }
     }
@@ -294,6 +309,9 @@ class Security
             $this->logout();
             return false;
         }
+
+        // Renew session time on activity (sliding expiration)
+        $_SESSION[$timeKey] = time();
 
         return true;
     }
