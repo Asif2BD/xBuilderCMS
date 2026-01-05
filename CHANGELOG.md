@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-01-05
+
+### Fixed
+- **LinkedIn profile scraping**: Re-enabled and completely reworked with robust parsing
+  - Implemented 6-layer parsing strategy for maximum reliability
+    1. HTML `<title>` tag extraction
+    2. Open Graph meta tags (`og:title`, `og:description`)
+    3. Twitter Card meta tags
+    4. JSON-LD structured data parsing
+    5. Standard meta description
+    6. Username extraction from URL as fallback
+  - Improved browser emulation with comprehensive HTTP headers
+  - Added Sec-Fetch-* headers and modern Chrome user agent
+  - Cookie support for session handling
+  - Better error logging for debugging scraping issues
+  - Validates response size and HTTP status
+  - Graceful fallback messages if scraping fails
+
+### Improved
+- Frontend now shows "🔍 Fetching your LinkedIn profile..." status during fetch
+- Success message displays fetched profile name
+- Backend extracts name, headline, location, and about section when available
+- More reliable profile data extraction from public LinkedIn profiles
+
 ## [0.7.5] - 2026-01-01
 
 ### Fixed

@@ -3,10 +3,15 @@
  * XBuilder Update Manager
  *
  * Handles:
- * - Checking for updates from GitHub
+ * - Checking for updates from GitHub main branch
  * - Downloading and applying updates
  * - Backup and rollback functionality
  * - Preserving user data (site/, storage/, config)
+ *
+ * Update Method:
+ * - Checks VERSION file from GitHub main branch
+ * - Downloads main branch archive if newer version available
+ * - No dependency on GitHub Releases
  *
  * Safety features:
  * - Creates backup before update
@@ -62,14 +67,15 @@ class Update
     }
 
     /**
-     * Check for updates from GitHub
+     * Check for updates from GitHub main branch
      */
     public function checkForUpdates(): array
     {
         try {
-            $url = "https://api.github.com/repos/{$this->githubRepo}/releases/latest";
+            // Check VERSION file from main branch
+            $versionUrl = "https://raw.githubusercontent.com/{$this->githubRepo}/main/VERSION";
 
-            $ch = curl_init($url);
+            $ch = curl_init($versionUrl);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => true,
@@ -85,33 +91,48 @@ class Update
             if ($httpCode !== 200 || !$response) {
                 return [
                     'available' => false,
-                    'error' => 'Failed to check for updates'
+                    'current_version' => $this->currentVersion,
+                    'error' => 'Failed to check for updates from GitHub'
                 ];
             }
 
-            $data = json_decode($response, true);
-            if (!$data || !isset($data['tag_name'])) {
+            $latestVersion = trim($response);
+
+            // Validate version format (e.g., 0.7.6)
+            if (!preg_match('/^\d+\.\d+\.\d+$/', $latestVersion)) {
                 return [
                     'available' => false,
-                    'error' => 'Invalid response from GitHub'
+                    'current_version' => $this->currentVersion,
+                    'error' => 'Invalid version format from GitHub'
                 ];
             }
 
-            $latestVersion = ltrim($data['tag_name'], 'v');
             $hasUpdate = version_compare($latestVersion, $this->currentVersion, '>');
+
+            // Fetch CHANGELOG for release notes
+            $changelogUrl = "https://raw.githubusercontent.com/{$this->githubRepo}/main/CHANGELOG.md";
+            $changelog = @file_get_contents($changelogUrl);
+
+            // Extract changelog for latest version
+            $changelogNotes = '';
+            if ($changelog) {
+                if (preg_match("/## \[{$latestVersion}\].*?\n(.*?)(?=\n## \[|$)/s", $changelog, $matches)) {
+                    $changelogNotes = trim($matches[1]);
+                }
+            }
 
             return [
                 'available' => $hasUpdate,
                 'current_version' => $this->currentVersion,
                 'latest_version' => $latestVersion,
-                'changelog' => $data['body'] ?? '',
-                'published_at' => $data['published_at'] ?? '',
-                'download_url' => $data['zipball_url'] ?? ''
+                'changelog' => $changelogNotes,
+                'download_url' => "https://github.com/{$this->githubRepo}/archive/refs/heads/main.zip"
             ];
 
         } catch (\Exception $e) {
             return [
                 'available' => false,
+                'current_version' => $this->currentVersion,
                 'error' => $e->getMessage()
             ];
         }
@@ -233,29 +254,38 @@ class Update
     }
 
     /**
-     * Apply update from downloaded ZIP
+     * Apply update from downloaded ZIP (main branch archive)
      */
     private function applyUpdate(string $zipFile): bool
     {
         try {
             $zip = new \ZipArchive();
             if ($zip->open($zipFile) !== true) {
+                error_log("[XBuilder Update] Failed to open ZIP file");
                 return false;
             }
 
             // Extract to temporary directory
             $tempDir = sys_get_temp_dir() . '/xbuilder-extract-' . time();
-            $zip->extractTo($tempDir);
+            if (!$zip->extractTo($tempDir)) {
+                error_log("[XBuilder Update] Failed to extract ZIP");
+                $zip->close();
+                return false;
+            }
             $zip->close();
 
-            // Find the extracted directory (GitHub adds a prefix)
+            // Find the extracted directory (GitHub main branch creates "xBuilderCMS-main")
             $extractedDirs = glob($tempDir . '/*', GLOB_ONLYDIR);
             if (empty($extractedDirs)) {
+                error_log("[XBuilder Update] No directories found in extracted ZIP");
+                $this->deleteDir($tempDir);
                 return false;
             }
             $sourceDir = $extractedDirs[0];
 
-            // Files/dirs to update (preserve user data)
+            error_log("[XBuilder Update] Source directory: " . $sourceDir);
+
+            // Files/dirs to update (preserve user data: site/, storage/)
             $itemsToUpdate = [
                 'index.php',
                 '.htaccess',
@@ -275,23 +305,33 @@ class Update
                 $dest = $this->rootPath . '/' . $item;
 
                 if (!file_exists($source)) {
+                    error_log("[XBuilder Update] Source not found: $source");
                     continue;
                 }
 
                 if (is_file($source)) {
-                    copy($source, $dest);
+                    if (!copy($source, $dest)) {
+                        error_log("[XBuilder Update] Failed to copy file: $item");
+                    } else {
+                        error_log("[XBuilder Update] Copied file: $item");
+                    }
                 } elseif (is_dir($source)) {
                     $this->copyDir($source, $dest);
+                    error_log("[XBuilder Update] Copied directory: $item");
                 }
             }
 
             // Cleanup
             $this->deleteDir($tempDir);
-            unlink($zipFile);
+            if (file_exists($zipFile)) {
+                unlink($zipFile);
+            }
 
+            error_log("[XBuilder Update] Update applied successfully");
             return true;
 
         } catch (\Exception $e) {
+            error_log("[XBuilder Update] Exception during apply: " . $e->getMessage());
             return false;
         }
     }

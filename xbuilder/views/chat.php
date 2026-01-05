@@ -515,20 +515,57 @@ $version = file_exists($versionFile) ? trim(file_get_contents($versionFile)) : '
             input.value = '';
             autoResize(input);
 
-            // LinkedIn URL detection (scraping disabled due to anti-bot measures)
+            // LinkedIn URL detection - try to fetch profile
             const linkedinMatch = message.match(/https?:\/\/(www\.)?linkedin\.com\/(in|pub)\/[^\s]+/i);
             let linkedinData = null;
 
             if (linkedinMatch) {
                 const linkedinUrl = linkedinMatch[0];
-                console.log('[XBuilder] LinkedIn URL detected (scraping disabled):', linkedinUrl);
+                console.log('[XBuilder] LinkedIn URL detected:', linkedinUrl);
 
-                // LinkedIn has anti-bot measures that prevent reliable scraping
-                // Suggest CV upload instead
-                addMessageToUI('assistant', `📎 I see you shared a LinkedIn profile! Unfortunately, LinkedIn blocks automated profile fetching.\n\n**Instead, please:**\n• Upload your CV/resume using the 📎 button above, or\n• Tell me about yourself (profession, skills, experience, etc.)\n\nI'll create a stunning website based on that information!`);
-                hideTypingIndicator();
-                isLoading = false;
-                return;
+                // Show status that we're fetching LinkedIn
+                showTypingIndicator();
+                isLoading = true;
+
+                // Add status message
+                const statusMsg = addMessageToUI('assistant', '🔍 Fetching your LinkedIn profile...', false);
+
+                try {
+                    const linkedinResponse = await fetch('/xbuilder/api/linkedin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: linkedinUrl })
+                    });
+
+                    const linkedinResult = await linkedinResponse.json();
+
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+
+                    if (linkedinResult.success) {
+                        linkedinData = linkedinResult.content;
+                        console.log('[XBuilder] LinkedIn profile fetched:', linkedinResult.structured.name);
+                        addMessageToUI('assistant', `✓ Got it! I've fetched your LinkedIn profile for **${linkedinResult.structured.name}**. Creating your website now...`);
+                    } else {
+                        console.warn('[XBuilder] LinkedIn fetch failed:', linkedinResult.error);
+                        addMessageToUI('assistant', `⚠️ I couldn't fetch that LinkedIn profile. No worries - you can upload your CV instead, or just tell me about yourself!`);
+                        hideTypingIndicator();
+                        isLoading = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error('[XBuilder] LinkedIn fetch error:', error);
+                    // Remove status message
+                    if (statusMsg && statusMsg.parentElement) {
+                        statusMsg.parentElement.removeChild(statusMsg);
+                    }
+                    addMessageToUI('assistant', `⚠️ Couldn't fetch LinkedIn profile. You can upload your CV or tell me about yourself instead!`);
+                    hideTypingIndicator();
+                    isLoading = false;
+                    return;
+                }
             }
 
             // Show typing indicator

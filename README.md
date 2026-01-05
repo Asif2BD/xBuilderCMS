@@ -1,6 +1,6 @@
 # 🚀 XBuilder - AI-Powered Website Builder
 
-[![Version](https://img.shields.io/badge/version-0.7.5-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7.6-blue.svg)](https://github.com/Asif2BD/xBuilderCMS/blob/main/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
@@ -8,7 +8,7 @@
 
 XBuilder is an open-source, self-hosted website builder that uses AI (Claude, Gemini, or ChatGPT) to generate beautiful, production-ready static websites. Just chat with AI, describe what you want, upload your CV - and get a professional website in minutes.
 
-> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.7.5** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
+> 📋 **[View Changelog](CHANGELOG.md)** | 🚀 **Current Version: 0.7.6** | 📖 **[Deployment Guide](DEPLOYMENT.md)**
 
 ![XBuilder Demo](https://via.placeholder.com/800x400?text=XBuilder+Demo)
 
